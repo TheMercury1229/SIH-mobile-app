@@ -23,34 +23,46 @@ export default function HomeScreen() {
     ]);
   };
 
+  const handleStartAssessment = () => {
+    router.push("/(app)/assessment" as any);
+  };
+
+  const handleViewProgress = () => {
+    router.push("/(app)/progress" as any);
+  };
+
   if (!token) {
     return <Redirect href={"/(auth)/login"} />;
   }
 
   const quickActions = [
     {
-      title: "Start Workout",
-      description: "Begin your fitness journey",
-      icon: "💪",
+      title: "Start Assessment",
+      description: "Begin your fitness assessment",
+      icon: "📋",
       color: "from-orange-400 to-pink-400",
+      onPress: handleStartAssessment,
     },
     {
       title: "View Progress",
       description: "Track your achievements",
       icon: "📊",
       color: "from-blue-400 to-purple-400",
+      onPress: handleViewProgress,
     },
     {
       title: "Set Goals",
       description: "Plan your next milestone",
       icon: "🎯",
       color: "from-green-400 to-blue-400",
+      onPress: () => {},
     },
     {
       title: "Community",
       description: "Connect with athletes",
       icon: "👥",
       color: "from-purple-400 to-pink-400",
+      onPress: () => {},
     },
   ];
 
@@ -114,6 +126,7 @@ export default function HomeScreen() {
                   key={index}
                   className="mb-4 w-[48%] overflow-hidden rounded-2xl"
                   activeOpacity={0.8}
+                  onPress={action.onPress}
                 >
                   <LinearGradient
                     colors={
@@ -154,10 +167,10 @@ export default function HomeScreen() {
                   </View>
                   <View>
                     <Text className="font-semibold text-white">
-                      Morning Cardio
+                      Fitness Assessment
                     </Text>
                     <Text className="text-sm text-white/70">
-                      45 minutes ago
+                      2 days ago
                     </Text>
                   </View>
                 </View>
