@@ -26,7 +26,7 @@ export default function Index() {
         if (token) {
           router.replace("/home");
         } else {
-          router.replace("/login");
+          router.replace("/register");
         }
       } catch (error) {
         console.error("Error initializing app:", error);
