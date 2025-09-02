@@ -17,9 +17,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuthStore } from "../../store/authStore";
 
 const Register = () => {
   const router = useRouter();
+  const { setUser, setToken } = useAuthStore();
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -150,13 +152,39 @@ const Register = () => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
+      // Create user object with all registration data
+      const newUser = {
+        id: Date.now().toString(), // Simple ID generation
+        name: name.trim(),
+        username: username.trim(),
+        email: `${username.trim()}@athlete.com`, // Generate email from username
+        profileImage: profileImage || undefined,
+        avatar: profileImage || undefined,
+        age,
+        gender,
+        height,
+        weight,
+        sport,
+        adharNo,
+        joinDate: new Date().toLocaleDateString(),
+        // Initialize some default stats
+        workouts: 0,
+        streak: 0,
+        goals: "0/3",
+        calories: "0",
+      };
+
+      // Save user data and token to store
+      setUser(newUser);
+      setToken("registered-token");
+
       Alert.alert(
         "Success",
-        "Registration successful! Please login with your credentials.",
+        "Registration successful! Welcome to Athletic Hub!",
         [
           {
-            text: "OK",
-            onPress: () => router.replace("/(auth)/login"),
+            text: "Continue",
+            onPress: () => router.replace("/(app)/home"),
           },
         ]
       );
@@ -183,9 +211,6 @@ const Register = () => {
           >
             {/* Header */}
             <View className="pt-6 pb-8 items-center">
-              <View className="mb-6 h-16 w-16 items-center justify-center rounded-full bg-white/20">
-                <Text className="text-2xl font-bold text-white">A</Text>
-              </View>
               <Text className="mb-2 text-3xl font-bold text-white">
                 Create Account
               </Text>
@@ -234,7 +259,7 @@ const Register = () => {
               </View>
 
               {/* Age and Gender Row */}
-              <View className="flex-row space-x-4">
+              <View className="flex-col space-x-4">
                 <View className="flex-1 space-y-2">
                   <Text className="text-base font-medium text-white/90">
                     Age
@@ -269,7 +294,7 @@ const Register = () => {
               </View>
 
               {/* Height and Weight Row */}
-              <View className="flex-row space-x-4">
+              <View className="flex-col space-x-4">
                 <View className="flex-1 space-y-2">
                   <Text className="text-base font-medium text-white/90">
                     Height (cm)
@@ -446,7 +471,7 @@ const Register = () => {
               </View>
 
               {/* Action Buttons */}
-              <View className="mt-8 flex-row space-x-4">
+              <View className="mt-8 flex-col gap-3 space-x-4">
                 <TouchableOpacity
                   className="flex-1 rounded-xl bg-white/10 px-6 py-4 backdrop-blur-sm"
                   onPress={() => setCurrentPage(1)}

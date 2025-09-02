@@ -3,11 +3,25 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 interface User {
+  id?: string;
   name: string;
   email?: string;
+  username?: string;
   avatar?: string;
   joinDate?: string;
-  // Add more user properties as needed
+  // Personal Information from registration
+  age?: string;
+  gender?: string;
+  height?: string;
+  weight?: string;
+  sport?: string;
+  adharNo?: string;
+  profileImage?: string;
+  // Additional user stats
+  workouts?: number;
+  streak?: number;
+  goals?: string;
+  calories?: string;
 }
 
 interface AuthState {

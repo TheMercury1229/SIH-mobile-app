@@ -81,9 +81,6 @@ export default function LoginScreen() {
             {/* Header */}
             <View className="flex-1 justify-center">
               <View className="mb-12 items-center">
-                <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-white/20">
-                  <Text className="text-3xl font-bold text-white">A</Text>
-                </View>
                 <Text className="mb-2 text-3xl font-bold text-white">
                   Welcome Back
                 </Text>

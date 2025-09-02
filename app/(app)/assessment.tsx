@@ -13,7 +13,10 @@ export default function AssessmentScreen() {
       title: "Vertical Jump Test",
       description: "Measure your explosive power and leg strength",
       icon: "🦘",
-      color: ["#fb923c", "#ec4899"] as [import("react-native").ColorValue, import("react-native").ColorValue],
+      color: ["#fb923c", "#ec4899"] as [
+        import("react-native").ColorValue,
+        import("react-native").ColorValue,
+      ],
       duration: "5 min",
       difficulty: "Easy",
     },
@@ -22,7 +25,10 @@ export default function AssessmentScreen() {
       title: "Shuttle Run Test",
       description: "Test your agility and speed",
       icon: "🏃‍♂️",
-      color: ["#60a5fa", "#a855f7"] as [import("react-native").ColorValue, import("react-native").ColorValue],
+      color: ["#60a5fa", "#a855f7"] as [
+        import("react-native").ColorValue,
+        import("react-native").ColorValue,
+      ],
       duration: "10 min",
       difficulty: "Medium",
     },
@@ -31,7 +37,10 @@ export default function AssessmentScreen() {
       title: "Sit-ups Test",
       description: "Assess your core strength and endurance",
       icon: "💪",
-      color: ["#4ade80", "#3b82f6"] as [import("react-native").ColorValue, import("react-native").ColorValue],
+      color: ["#4ade80", "#3b82f6"] as [
+        import("react-native").ColorValue,
+        import("react-native").ColorValue,
+      ],
       duration: "3 min",
       difficulty: "Easy",
     },
@@ -40,7 +49,10 @@ export default function AssessmentScreen() {
       title: "Endurance Run Test",
       description: "Evaluate your cardiovascular fitness",
       icon: "🏃‍♀️",
-      color: ["#a855f7", "#ec4899"] as [import("react-native").ColorValue, import("react-native").ColorValue],
+      color: ["#a855f7", "#ec4899"] as [
+        import("react-native").ColorValue,
+        import("react-native").ColorValue,
+      ],
       duration: "20 min",
       difficulty: "Hard",
     },
@@ -89,7 +101,7 @@ export default function AssessmentScreen() {
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
         >
           <View className="px-6">
             {tests.map((test, index) => (
@@ -116,14 +128,20 @@ export default function AssessmentScreen() {
                       <View className="flex-row items-center justify-between">
                         <View className="flex-row items-center">
                           <View className="mr-4">
-                            <Text className="text-xs text-white/70">Duration</Text>
+                            <Text className="text-xs text-white/70">
+                              Duration
+                            </Text>
                             <Text className="text-sm font-semibold text-white">
                               {test.duration}
                             </Text>
                           </View>
                           <View>
-                            <Text className="text-xs text-white/70">Difficulty</Text>
-                            <Text className={`text-sm font-semibold ${getDifficultyColor(test.difficulty)}`}>
+                            <Text className="text-xs text-white/70">
+                              Difficulty
+                            </Text>
+                            <Text
+                              className={`text-sm font-semibold ${getDifficultyColor(test.difficulty)}`}
+                            >
                               {test.difficulty}
                             </Text>
                           </View>

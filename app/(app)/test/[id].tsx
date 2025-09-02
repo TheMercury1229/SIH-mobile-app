@@ -1,17 +1,37 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TestScreen() {
   const router = useRouter();
-  const { testId } = useLocalSearchParams();
+  const { testId, recordingComplete } = useLocalSearchParams();
   const [isRecording, setIsRecording] = useState(false);
   const [hasRecorded, setHasRecorded] = useState(false);
 
-  const testData = {
+  // Ensure testId is a string
+  const testIdStr =
+    typeof testId === "string"
+      ? testId
+      : Array.isArray(testId)
+        ? testId[0]
+        : undefined;
+
+  // Check if returning from camera with completed recording
+  useFocusEffect(
+    useCallback(() => {
+      if (recordingComplete === "true") {
+        setHasRecorded(true);
+        // Clear the param to prevent triggering again
+        router.setParams({ recordingComplete: undefined });
+      }
+    }, [recordingComplete])
+  );
+
+  const testData: Record<string, any> = {
     "vertical-jump": {
       title: "Vertical Jump Test",
       icon: "🦘",
@@ -22,13 +42,13 @@ export default function TestScreen() {
         "Keep your hands on your hips throughout the movement",
         "Bend your knees and jump as high as possible",
         "Land softly with bent knees",
-        "Perform 3 attempts with 30 seconds rest between each"
+        "Perform 3 attempts with 30 seconds rest between each",
       ],
       tips: [
         "Warm up with light jumping before recording",
         "Make sure the camera captures your full body",
-        "Jump straight up, avoid forward movement"
-      ]
+        "Jump straight up, avoid forward movement",
+      ],
     },
     "shuttle-run": {
       title: "Shuttle Run Test",
@@ -40,13 +60,13 @@ export default function TestScreen() {
         "Start at one cone, sprint to the other cone",
         "Touch the cone and immediately sprint back",
         "Continue for 30 seconds at maximum speed",
-        "Count the number of times you touch each cone"
+        "Count the number of times you touch each cone",
       ],
       tips: [
         "Use proper running technique with arm drive",
         "Stay low when changing direction",
-        "Maintain maximum effort throughout"
-      ]
+        "Maintain maximum effort throughout",
+      ],
     },
     "sit-ups": {
       title: "Sit-ups Test",
@@ -58,13 +78,13 @@ export default function TestScreen() {
         "Cross your arms over your chest",
         "Curl up until your elbows touch your knees",
         "Lower back down until shoulder blades touch the ground",
-        "Perform as many as possible in 60 seconds"
+        "Perform as many as possible in 60 seconds",
       ],
       tips: [
         "Keep your feet flat on the ground",
         "Use your core muscles, not momentum",
-        "Maintain steady breathing throughout"
-      ]
+        "Maintain steady breathing throughout",
+      ],
     },
     "endurance-run": {
       title: "Endurance Run Test",
@@ -76,27 +96,37 @@ export default function TestScreen() {
         "Run at a steady, sustainable pace for 12 minutes",
         "Try to maintain the same speed throughout",
         "Measure the total distance covered",
-        "Cool down with light walking after completion"
-      ],
-      tips: [
+        "Cool down with light walking after completion",
         "Start at a comfortable pace you can maintain",
         "Focus on consistent breathing",
-        "Track your distance using a fitness app"
-      ]
-    }
+        "Track your distance using a fitness app",
+      ],
+    },
   };
 
-  const currentTest = testData[testId]  || testData["vertical-jump"];
+  const currentTest =
+    testData[testIdStr ?? "vertical-jump"] || testData["vertical-jump"];
 
   const handleStartRecording = () => {
-    // In a real app, this would start the camera recording
-    setIsRecording(true);
-    // Simulate recording duration
-    setTimeout(() => {
-      setIsRecording(false);
-      setHasRecorded(true);
-      Alert.alert("Recording Complete", "Your test has been recorded successfully!");
-    }, 3000);
+    // Navigate to camera screen with test parameters
+    const duration =
+      testIdStr === "endurance-run"
+        ? "720" // 12 minutes
+        : testIdStr === "sit-ups"
+          ? "60" // 1 minute
+          : testIdStr === "shuttle-run"
+            ? "30" // 30 seconds
+            : "60"; // default 1 minute for vertical jump (3 attempts)
+
+    router.push({
+      pathname: "/(app)/camera",
+      params: {
+        exercise: currentTest.title,
+        duration: `${duration} seconds`,
+        testId: testIdStr,
+        returnTo: "test",
+      },
+    });
   };
 
   const handleSubmitTest = () => {
@@ -104,19 +134,19 @@ export default function TestScreen() {
       Alert.alert("No Recording", "Please record your test first.");
       return;
     }
-    
+
     Alert.alert(
       "Test Submitted",
-      "Your test has been submitted for analysis. Results will be available in your progress section.",
+      `Your ${currentTest.title} has been submitted for analysis. Results will be available in your progress section.`,
       [
         {
           text: "View Progress",
-          onPress: () => router.replace("/(app)/progress" as any)
+          onPress: () => router.replace("/(app)/progress"),
         },
         {
           text: "Back to Assessment",
-          onPress: () => router.replace("/(app)/assessment" as any)
-        }
+          onPress: () => router.replace("/(app)/assessment"),
+        },
       ]
     );
   };
@@ -147,7 +177,7 @@ export default function TestScreen() {
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* Instructions */}
           <View className="mx-6 mb-6">
@@ -155,12 +185,14 @@ export default function TestScreen() {
               <Text className="mb-4 text-xl font-bold text-white">
                 Instructions
               </Text>
-              {currentTest.instructions.map((instruction: string, index: number) => (
-                <View key={index} className="mb-2 flex-row">
-                  <Text className="mr-2 text-white/90">{index + 1}.</Text>
-                  <Text className="flex-1 text-white/90">{instruction}</Text>
-                </View>
-              ))}
+              {currentTest.instructions.map(
+                (instruction: string, index: number) => (
+                  <View key={index} className="mb-2 flex-row">
+                    <Text className="mr-2 text-white/90">{index + 1}.</Text>
+                    <Text className="flex-1 text-white/90">{instruction}</Text>
+                  </View>
+                )
+              )}
             </View>
           </View>
 
@@ -185,33 +217,52 @@ export default function TestScreen() {
               <Text className="mb-4 text-xl font-bold text-white">
                 Video Recording
               </Text>
-              
+
               {!hasRecorded ? (
                 <>
                   <Text className="mb-4 text-center text-white/90">
-                    Position your camera and start recording when ready
+                    Tap below to start recording your{" "}
+                    {currentTest.title.toLowerCase()}
                   </Text>
                   <View className="mb-4 h-48 items-center justify-center rounded-xl bg-black/30">
                     <Text className="text-6xl">📹</Text>
-                    <Text className="mt-2 text-white/70">Camera Preview</Text>
+                    <Text className="mt-2 text-white/70">Ready to Record</Text>
+                    <Text className="mt-1 text-white/50 text-sm">
+                      Duration:{" "}
+                      {testIdStr === "endurance-run"
+                        ? "12 minutes"
+                        : testIdStr === "sit-ups"
+                          ? "1 minute"
+                          : testIdStr === "shuttle-run"
+                            ? "30 seconds"
+                            : "1 minute"}
+                    </Text>
                   </View>
                   <TouchableOpacity
-                    className={`rounded-xl px-6 py-4 ${
-                      isRecording ? "bg-red-500" : "bg-white/20"
-                    }`}
+                    className="rounded-xl bg-red-500 px-6 py-4 shadow-lg"
                     onPress={handleStartRecording}
                     disabled={isRecording}
+                    activeOpacity={0.8}
                   >
                     <Text className="text-center text-lg font-semibold text-white">
-                      {isRecording ? "Recording..." : "Start Recording"}
+                      🎬 Start Camera Recording
                     </Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
+                  <Text className="mb-4 text-center text-white/90">
+                    Great! Your {currentTest.title.toLowerCase()} has been
+                    recorded
+                  </Text>
                   <View className="mb-4 h-48 items-center justify-center rounded-xl bg-black/30">
                     <Text className="text-6xl">✅</Text>
-                    <Text className="mt-2 text-white/70">Recording Complete</Text>
+                    <Text className="mt-2 text-white/70">
+                      Recording Complete
+                    </Text>
+                    <Text className="mt-1 text-white/50 text-sm">
+                      Ready for AI analysis
+                    </Text>
                   </View>
                   <TouchableOpacity
                     className="mb-3 rounded-xl bg-white/20 px-6 py-4"
@@ -219,9 +270,10 @@ export default function TestScreen() {
                       setHasRecorded(false);
                       setIsRecording(false);
                     }}
+                    activeOpacity={0.8}
                   >
                     <Text className="text-center text-lg font-semibold text-white">
-                      Record Again
+                      🔄 Record Again
                     </Text>
                   </TouchableOpacity>
                 </>

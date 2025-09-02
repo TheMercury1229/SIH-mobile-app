@@ -18,7 +18,7 @@ export default function ProgressScreen() {
       color: ["#fb923c", "#ec4899"],
       videoThumbnail: "📹",
       improvement: "+3cm",
-      isImprovement: true
+      isImprovement: true,
     },
     {
       id: 2,
@@ -29,7 +29,7 @@ export default function ProgressScreen() {
       color: ["#4ade80", "#3b82f6"],
       videoThumbnail: "📹",
       improvement: "+5 reps",
-      isImprovement: true
+      isImprovement: true,
     },
     {
       id: 3,
@@ -40,7 +40,7 @@ export default function ProgressScreen() {
       color: ["#60a5fa", "#a855f7"],
       videoThumbnail: "📹",
       improvement: "-1.2s",
-      isImprovement: true
+      isImprovement: true,
     },
     {
       id: 4,
@@ -51,14 +51,14 @@ export default function ProgressScreen() {
       color: ["#a855f7", "#ec4899"],
       videoThumbnail: "📹",
       improvement: "-0.1km",
-      isImprovement: false
-    }
+      isImprovement: false,
+    },
   ];
 
   const overallStats = [
     { label: "Total Tests", value: "12", change: "+4" },
     { label: "Best Score", value: "95%", change: "+12%" },
-    { label: "Consistency", value: "87%", change: "+5%" }
+    { label: "Consistency", value: "87%", change: "+5%" },
   ];
 
   const handlePlayVideo = (testId: number) => {
@@ -66,12 +66,12 @@ export default function ProgressScreen() {
     console.log(`Playing video for test ${testId}`);
   };
 
-  const formatDate = (dateString : string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -103,7 +103,7 @@ export default function ProgressScreen() {
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* Overall Stats */}
           <View className="mx-6 mb-6">
@@ -135,10 +135,19 @@ export default function ProgressScreen() {
               Recent Tests
             </Text>
             {testResults.map((result) => (
-              <View key={result.id} className="mb-4">
+              <View
+                key={result.id}
+                className="mb-4 rounded-2xl overflow-hidden"
+              >
                 <LinearGradient
-                  colors={result.color.concat('rgba(255,255,255,0.1)') as [import('react-native').ColorValue, import('react-native').ColorValue, ...import('react-native').ColorValue[]]}
-                  className="rounded-2xl p-1"
+                  colors={
+                    result.color.concat("rgba(255,255,255,0.1)") as [
+                      import("react-native").ColorValue,
+                      import("react-native").ColorValue,
+                      ...import("react-native").ColorValue[],
+                    ]
+                  }
+                  className="rounded-2xl"
                 >
                   <View className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                     <View className="flex-row items-center justify-between">
@@ -155,7 +164,7 @@ export default function ProgressScreen() {
                             </Text>
                           </View>
                         </View>
-                        
+
                         {/* Score and Improvement */}
                         <View className="flex-row items-center justify-between">
                           <View>
@@ -165,10 +174,16 @@ export default function ProgressScreen() {
                             </Text>
                           </View>
                           <View className="items-end">
-                            <Text className="text-xs text-white/70">Change</Text>
-                            <Text className={`text-sm font-semibold ${
-                              result.isImprovement ? 'text-green-400' : 'text-red-400'
-                            }`}>
+                            <Text className="text-xs text-white/70">
+                              Change
+                            </Text>
+                            <Text
+                              className={`text-sm font-semibold ${
+                                result.isImprovement
+                                  ? "text-green-400"
+                                  : "text-red-400"
+                              }`}
+                            >
                               {result.improvement}
                             </Text>
                           </View>
@@ -180,7 +195,9 @@ export default function ProgressScreen() {
                         className="ml-4 h-16 w-16 items-center justify-center rounded-xl bg-white/20"
                         onPress={() => handlePlayVideo(result.id)}
                       >
-                        <Text className="text-2xl">{result.videoThumbnail}</Text>
+                        <Text className="text-2xl">
+                          {result.videoThumbnail}
+                        </Text>
                         <Text className="text-xs text-white/70 mt-1">Play</Text>
                       </TouchableOpacity>
                     </View>
@@ -202,11 +219,13 @@ export default function ProgressScreen() {
                 </Text>
                 <Text className="text-sm text-white/70">January 2024</Text>
               </View>
-              
+
               <View className="space-y-3">
                 <View className="flex-row items-center justify-between py-2">
                   <Text className="text-white/90">🏆 Best Performance</Text>
-                  <Text className="font-semibold text-white">Vertical Jump</Text>
+                  <Text className="font-semibold text-white">
+                    Vertical Jump
+                  </Text>
                 </View>
                 <View className="flex-row items-center justify-between py-2">
                   <Text className="text-white/90">📈 Most Improved</Text>
@@ -238,28 +257,34 @@ export default function ProgressScreen() {
                   Based on your recent tests, here are some areas to work on:
                 </Text>
               </View>
-              
+
               <View className="space-y-3">
                 <View className="flex-row items-start">
                   <Text className="mr-2 text-yellow-400">💡</Text>
                   <View className="flex-1">
-                    <Text className="font-semibold text-white">Endurance Training</Text>
+                    <Text className="font-semibold text-white">
+                      Endurance Training
+                    </Text>
                     <Text className="text-sm text-white/80">
-                      Your endurance run showed a slight decrease. Consider adding more cardio sessions.
+                      Your endurance run showed a slight decrease. Consider
+                      adding more cardio sessions.
                     </Text>
                   </View>
                 </View>
-                
+
                 <View className="flex-row items-start">
                   <Text className="mr-2 text-green-400">✨</Text>
                   <View className="flex-1">
-                    <Text className="font-semibold text-white">Keep Up the Core Work</Text>
+                    <Text className="font-semibold text-white">
+                      Keep Up the Core Work
+                    </Text>
                     <Text className="text-sm text-white/80">
-                      Great improvement in sit-ups! Maintain your core training routine.
+                      Great improvement in sit-ups! Maintain your core training
+                      routine.
                     </Text>
                   </View>
                 </View>
-                
+
                 <View className="flex-row items-start">
                   <Text className="mr-2 text-blue-400">🎯</Text>
                   <View className="flex-1">
@@ -273,28 +298,6 @@ export default function ProgressScreen() {
             </View>
           </View>
         </ScrollView>
-
-        {/* Action Buttons */}
-        <View className="px-6 pb-6">
-          <View className="flex-row space-x-3">
-            <TouchableOpacity
-              className="flex-1 rounded-xl bg-white/20 px-4 py-3"
-              onPress={() => router.push("/(app)/assessment" as any)}
-            >
-              <Text className="text-center font-semibold text-white">
-                New Assessment
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="flex-1 rounded-xl bg-white/20 px-4 py-3"
-              onPress={() => {/* Export/Share functionality */}}
-            >
-              <Text className="text-center font-semibold text-white">
-                Export Results
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </SafeAreaView>
     </LinearGradient>
   );

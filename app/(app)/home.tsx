@@ -79,7 +79,7 @@ export default function HomeScreen() {
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* Header Section */}
           <View className="px-6 pt-6 pb-8">
@@ -169,9 +169,7 @@ export default function HomeScreen() {
                     <Text className="font-semibold text-white">
                       Fitness Assessment
                     </Text>
-                    <Text className="text-sm text-white/70">
-                      2 days ago
-                    </Text>
+                    <Text className="text-sm text-white/70">2 days ago</Text>
                   </View>
                 </View>
                 <Text className="text-sm font-medium text-green-400">
@@ -181,19 +179,6 @@ export default function HomeScreen() {
             </View>
           </View>
         </ScrollView>
-
-        {/* Logout Button */}
-        <View className="px-6 pb-6">
-          <TouchableOpacity
-            className="rounded-xl bg-white/10 px-6 py-4 backdrop-blur-sm"
-            onPress={handleLogout}
-            activeOpacity={0.8}
-          >
-            <Text className="text-center text-lg font-semibold text-white">
-              Logout
-            </Text>
-          </TouchableOpacity>
-        </View>
       </SafeAreaView>
     </LinearGradient>
   );
