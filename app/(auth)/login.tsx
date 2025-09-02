@@ -153,7 +153,11 @@ export default function LoginScreen() {
                   <Text className="text-base text-white/70">
                     Don't have an account?
                   </Text>
-                  <TouchableOpacity activeOpacity={0.7}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => router.push("/(auth)/register")}
+                    disabled={isLoading}
+                  >
                     <Text className="text-base font-semibold text-white underline">
                       Sign Up
                     </Text>
