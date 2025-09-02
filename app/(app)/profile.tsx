@@ -1,5 +1,8 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, useRouter } from "expo-router";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../../store/authStore";
 
 export default function ProfileScreen() {
@@ -7,88 +10,203 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   const handleLogout = () => {
-    logout();
-    router.replace("/");
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => {
+          logout();
+          router.replace("/(auth)/login");
+        },
+      },
+    ]);
   };
 
   const handleEditProfile = () => {
-    // This could navigate to an edit profile screen in the future
-    alert("Edit profile functionality coming soon!");
+    Alert.alert(
+      "Coming Soon",
+      "Edit profile functionality will be available soon!"
+    );
   };
 
   if (!token) {
     return <Redirect href={"/(auth)/login"} />;
   }
 
+  const profileSections = [
+    {
+      title: "Account Settings",
+      items: [
+        {
+          icon: "👤",
+          label: "Personal Information",
+          action: handleEditProfile,
+        },
+        {
+          icon: "🔔",
+          label: "Notifications",
+          action: () =>
+            Alert.alert(
+              "Coming Soon",
+              "Notification settings will be available soon!"
+            ),
+        },
+        {
+          icon: "🔒",
+          label: "Privacy & Security",
+          action: () =>
+            Alert.alert(
+              "Coming Soon",
+              "Privacy settings will be available soon!"
+            ),
+        },
+      ],
+    },
+    {
+      title: "Fitness",
+      items: [
+        {
+          icon: "🎯",
+          label: "Goals & Targets",
+          action: () =>
+            Alert.alert(
+              "Coming Soon",
+              "Goals settings will be available soon!"
+            ),
+        },
+        {
+          icon: "📊",
+          label: "Activity History",
+          action: () =>
+            Alert.alert(
+              "Coming Soon",
+              "Activity history will be available soon!"
+            ),
+        },
+        {
+          icon: "⚙️",
+          label: "Workout Preferences",
+          action: () =>
+            Alert.alert(
+              "Coming Soon",
+              "Workout preferences will be available soon!"
+            ),
+        },
+      ],
+    },
+  ];
+
   return (
-    <ScrollView className="flex-1 bg-white">
-      <View className="items-center p-5">
-        {/* Profile Avatar Placeholder */}
-        <View className="mb-6 h-24 w-24 items-center justify-center rounded-full bg-blue-100">
-          <Text className="text-2xl font-bold text-blue-600">
-            {user?.name?.charAt(0) || "U"}
-          </Text>
-        </View>
-
-        {/* Profile Info Card */}
-        <View className="w-full max-w-sm rounded-lg bg-gray-50 p-6 shadow-md">
-          <Text className="mb-4 text-center text-2xl font-bold">
-            Profile Information
-          </Text>
-
-          <View className="mb-4">
-            <Text className="text-sm text-gray-500">Name</Text>
-            <Text className="text-lg font-medium">
-              {user?.name || "Not set"}
-            </Text>
+    <LinearGradient colors={["#667eea", "#764ba2"]} className="flex-1">
+      <StatusBar style="light" />
+      <SafeAreaView className="flex-1">
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        >
+          {/* Header */}
+          <View className="px-6 pt-6 pb-8">
+            <Text className="text-2xl font-bold text-white">Profile</Text>
           </View>
 
-          <View className="mb-4">
-            <Text className="text-sm text-gray-500">Email</Text>
-            <Text className="text-lg font-medium">
-              {user?.email || "athlete@example.com"}
-            </Text>
+          {/* Profile Card */}
+          <View className="mx-6 mb-8 rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
+            <View className="items-center">
+              {/* Avatar */}
+              <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-white/20">
+                <Text className="text-3xl font-bold text-white">
+                  {user?.name?.charAt(0).toUpperCase() || "A"}
+                </Text>
+              </View>
+
+              {/* User Info */}
+              <Text className="mb-2 text-2xl font-bold text-white">
+                {user?.name || "Athlete"}
+              </Text>
+              <Text className="mb-4 text-base text-white/80">
+                {user?.email || "athlete@example.com"}
+              </Text>
+
+              {/* Stats */}
+              <View className="flex-row space-x-8">
+                <View className="items-center">
+                  <Text className="text-2xl font-bold text-white">7</Text>
+                  <Text className="text-sm text-white/70">Day Streak</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-2xl font-bold text-white">24</Text>
+                  <Text className="text-sm text-white/70">Workouts</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-2xl font-bold text-white">3.2k</Text>
+                  <Text className="text-sm text-white/70">Calories</Text>
+                </View>
+              </View>
+            </View>
           </View>
 
-          <View className="mb-4">
-            <Text className="text-sm text-gray-500">Member Since</Text>
-            <Text className="text-lg font-medium">
-              {user?.joinDate || "Today"}
-            </Text>
-          </View>
+          {/* Profile Sections */}
+          {profileSections.map((section, sectionIndex) => (
+            <View key={sectionIndex} className="mx-6 mb-6">
+              <Text className="mb-3 text-xl font-bold text-white">
+                {section.title}
+              </Text>
+              <View className="rounded-2xl bg-white/10 backdrop-blur-sm">
+                {section.items.map((item, itemIndex) => (
+                  <TouchableOpacity
+                    key={itemIndex}
+                    className={`flex-row items-center p-4 ${
+                      itemIndex !== section.items.length - 1
+                        ? "border-b border-white/10"
+                        : ""
+                    }`}
+                    onPress={item.action}
+                    activeOpacity={0.7}
+                  >
+                    <Text className="mr-4 text-2xl">{item.icon}</Text>
+                    <Text className="flex-1 text-base font-medium text-white">
+                      {item.label}
+                    </Text>
+                    <Text className="text-white/60">›</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
 
-          <View className="mb-6">
-            <Text className="text-sm text-gray-500">Status</Text>
-            <Text className="text-lg font-medium text-green-600">Active</Text>
+          {/* Member Info */}
+          <View className="mx-6 mb-6 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+            <View className="flex-row items-center justify-between">
+              <View>
+                <Text className="text-base font-medium text-white">
+                  Member Since
+                </Text>
+                <Text className="text-sm text-white/70">
+                  {user?.joinDate || new Date().toLocaleDateString()}
+                </Text>
+              </View>
+              <View className="rounded-full bg-green-500 px-3 py-1">
+                <Text className="text-sm font-medium text-white">Active</Text>
+              </View>
+            </View>
           </View>
+        </ScrollView>
 
-          {/* Action Buttons */}
+        {/* Logout Button */}
+        <View className="px-6 pb-6">
           <TouchableOpacity
-            className="mb-3 h-12 w-full items-center justify-center rounded-lg bg-green-600"
-            onPress={handleEditProfile}
-          >
-            <Text className="text-lg font-semibold text-white">
-              Edit Profile
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="mb-3 h-12 w-full items-center justify-center rounded-lg bg-blue-600"
-            onPress={() => router.back()}
-          >
-            <Text className="text-lg font-semibold text-white">
-              Back to Home
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="h-12 w-full items-center justify-center rounded-lg bg-red-500"
+            className="rounded-xl bg-red-500/20 px-6 py-4 backdrop-blur-sm"
             onPress={handleLogout}
+            activeOpacity={0.8}
           >
-            <Text className="text-lg font-semibold text-white">Logout</Text>
+            <Text className="text-center text-lg font-semibold text-red-300">
+              Logout
+            </Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
