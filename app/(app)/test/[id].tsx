@@ -1,5 +1,4 @@
 import { useFocusEffect } from "@react-navigation/native";
-import * as DocumentPicker from "expo-document-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -14,17 +13,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useVideoSubmission } from "../../../hooks/useVideoSubmission";
+import { useFaceVerification } from "../../../hooks/useFaceVerification";
 
 export default function TestScreen() {
   const router = useRouter();
-  const { testId, recordingComplete } = useLocalSearchParams();
+  const { testId, recordingComplete, videoUri, faceImageUri } = useLocalSearchParams();
   const [isRecording, setIsRecording] = useState(false);
   const [hasRecorded, setHasRecorded] = useState(false);
-  const [uploadedVideoUri, setUploadedVideoUri] = useState<string | null>(null);
   const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
+  const [isFaceVerified, setIsFaceVerified] = useState(false);
 
   // Video submission hook
   const { submitVideo, isSubmitting, progress } = useVideoSubmission();
+  const { verifyFace, isVerifying } = useFaceVerification();
 
   // Ensure testId is a string
   const testIdStr =
@@ -37,14 +38,45 @@ export default function TestScreen() {
   // Check if returning from camera with completed recording
   useFocusEffect(
     useCallback(() => {
+      // Handle face image returned from camera for verification
+      const maybeVerify = async () => {
+        if (typeof faceImageUri === "string") {
+          try {
+            const res = await verifyFace(faceImageUri);
+            if (res.success && res.verified) {
+              setIsFaceVerified(true);
+              Alert.alert("Face Verification", "Verification successful. You can proceed to Sit-ups recording.");
+            } else {
+              setIsFaceVerified(false);
+              Alert.alert("Face Verification Failed", res.error || "Your face could not be verified. Please try again.");
+            }
+          } catch (e) {
+            setIsFaceVerified(false);
+            Alert.alert("Face Verification Error", "An error occurred during verification. Please try again.");
+          } finally {
+            // Clear the param to prevent re-triggering
+            router.setParams({ faceImageUri: undefined });
+          }
+        }
+      };
+      maybeVerify();
+
       if (recordingComplete === "true") {
-        setRecordedVideoUri("camera_recording"); // Placeholder - we'll get actual URI from camera
-        setUploadedVideoUri(null); // Clear any previous upload
+        // Set recorded video URI from camera params
+        const recUri = typeof videoUri === "string" ? videoUri : null;
+        setRecordedVideoUri(recUri);
         setHasRecorded(true);
         // Clear the param to prevent triggering again
-        router.setParams({ recordingComplete: undefined });
+        router.setParams({ recordingComplete: undefined, videoUri: undefined });
+        // Auto-submit once we have a recording
+        if (recUri) {
+          // Defer to allow state updates to flush before submit
+          setTimeout(() => {
+            handleSubmitTest();
+          }, 0);
+        }
       }
-    }, [recordingComplete])
+    }, [recordingComplete, videoUri, faceImageUri])
   );
 
   const testData: Record<string, any> = {
@@ -145,50 +177,22 @@ export default function TestScreen() {
         duration: `${duration} seconds`,
         testId: testIdStr,
         returnTo: "test",
+        mode: "video",
       },
     });
   };
 
-  const handleUploadVideo = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "video/*",
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const video = result.assets[0];
-
-        // Check file size (limit to 100MB)
-        const maxSize = 100 * 1024 * 1024; // 100MB in bytes
-        if (video.size && video.size > maxSize) {
-          Alert.alert(
-            "File Too Large",
-            "Please select a video file smaller than 100MB."
-          );
-          return;
-        }
-
-        // Check file duration would be ideal but requires additional processing
-        // For now, we'll just accept the video
-        setUploadedVideoUri(video.uri);
-        setRecordedVideoUri(null); // Clear any previous recording
-        setHasRecorded(true);
-
-        Alert.alert(
-          "Video Uploaded Successfully!",
-          `Your ${currentTest.title} video has been uploaded and is ready for analysis.`,
-          [{ text: "OK" }]
-        );
-      }
-    } catch (error) {
-      console.error("Error picking video:", error);
-      Alert.alert(
-        "Upload Error",
-        "Failed to upload video. Please try again or use the camera recording option."
-      );
-    }
+  const handleStartFaceVerification = () => {
+    // Navigate to camera in photo mode for face verification
+    router.push({
+      pathname: "/(app)/camera",
+      params: {
+        exercise: "Face Verification",
+        testId: testIdStr,
+        returnTo: "test",
+        mode: "photo",
+      },
+    });
   };
 
   const handleSubmitTest = async () => {
@@ -201,14 +205,14 @@ export default function TestScreen() {
       return; // Prevent multiple submissions
     }
 
-    const videoUri = uploadedVideoUri || recordedVideoUri;
-    if (!videoUri) {
+    const videoUriToSend = recordedVideoUri;
+    if (!videoUriToSend) {
       Alert.alert("Error", "No video found to submit.");
       return;
     }
 
     try {
-      const result = await submitVideo(videoUri, testIdStr || "sit-ups");
+      const result = await submitVideo(videoUriToSend, testIdStr || "sit-ups");
 
       if (result.success) {
         Alert.alert(
@@ -317,28 +321,63 @@ export default function TestScreen() {
             </View>
           </View>
 
+          {/* Face Verification Section (required for Sit-ups) */}
+          {testIdStr === "sit-ups" && (
+            <View className="mx-6 mb-6">
+              <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
+                <Text className="mb-1 text-sm font-semibold text-white/80">Step 1</Text>
+                <Text className="mb-2 text-xl font-bold text-white">Face Verification</Text>
+                <Text className="mb-4 text-sm text-white/70">
+                  Please verify your face before proceeding to Sit-ups recording.
+                </Text>
+                <View className="mb-4 rounded-xl bg-black/30 p-4 items-center">
+                  <Text className="text-5xl">🙂</Text>
+                  <Text className="mt-2 text-white/80">
+                    {isFaceVerified ? "Verified" : isVerifying ? "Verifying..." : "Not Verified"}
+                  </Text>
+                </View>
+                {!isFaceVerified && (
+                  <TouchableOpacity
+                    className="rounded-xl bg-blue-500 px-6 py-4 shadow-lg"
+                    onPress={handleStartFaceVerification}
+                    disabled={isVerifying}
+                    activeOpacity={0.8}
+                  >
+                    <Text className="text-center text-lg font-semibold text-white">
+                      {isVerifying ? "Verifying..." : "Start Face Verification"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Sit-up Recording Section */}
           {/* Camera Section */}
           <View className="mx-6 mb-6">
             <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
+              <Text className="mb-1 text-sm font-semibold text-white/80">{testIdStr === "sit-ups" ? "Step 2" : ""}</Text>
               <Text className="mb-4 text-xl font-bold text-white">
-                Video Recording
+                {testIdStr === "sit-ups" ? "Sit-ups Recording" : "Video Recording"}
               </Text>
               <Text className="mb-4 text-sm text-white/70">
-                💡 You can either record a new video using the camera or upload
-                an existing video from your device (max 100MB)
+                💡 Record your test using the camera. Upload from device is disabled.
               </Text>
 
               {!hasRecorded ? (
                 <>
                   <Text className="mb-4 text-center text-white/90">
-                    Choose how to submit your {currentTest.title.toLowerCase()}{" "}
-                    video
+                    Start recording your {currentTest.title.toLowerCase()} video
                   </Text>
                   <View className="mb-4 h-48 items-center justify-center rounded-xl bg-black/30">
                     <Text className="text-6xl">🎥</Text>
-                    <Text className="mt-2 text-white/70">Ready to Submit</Text>
+                    <Text className="mt-2 text-white/70">
+                      {testIdStr === "sit-ups" && !isFaceVerified
+                        ? "Face verification required"
+                        : "Ready to Submit"}
+                    </Text>
                     <Text className="mt-1 text-white/50 text-sm">
-                      Duration:{" "}
+                      Duration: {" "}
                       {testIdStr === "endurance-run"
                         ? "12 minutes"
                         : testIdStr === "sit-ups"
@@ -349,22 +388,17 @@ export default function TestScreen() {
                     </Text>
                   </View>
                   <TouchableOpacity
-                    className="mb-3 rounded-xl bg-blue-500 px-6 py-4 shadow-lg"
-                    onPress={handleUploadVideo}
-                    activeOpacity={0.8}
-                  >
-                    <Text className="text-center text-lg font-semibold text-white">
-                      📱 Upload Video from Device
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
                     className="rounded-xl bg-red-500 px-6 py-4 shadow-lg"
                     onPress={handleStartRecording}
-                    disabled={isRecording}
+                    disabled={
+                      isRecording || (testIdStr === "sit-ups" && !isFaceVerified)
+                    }
                     activeOpacity={0.8}
                   >
                     <Text className="text-center text-lg font-semibold text-white">
-                      🎬 Start Camera Recording
+                      {testIdStr === "sit-ups" && !isFaceVerified
+                        ? "Complete Face Verification First"
+                        : "🎬 Start Camera Recording"}
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -376,33 +410,17 @@ export default function TestScreen() {
                   </Text>
                   <View className="mb-4 h-48 items-center justify-center rounded-xl bg-black/30">
                     <Text className="text-6xl">✅</Text>
-                    <Text className="mt-2 text-white/70">
-                      {uploadedVideoUri
-                        ? "Video Uploaded"
-                        : "Recording Complete"}
-                    </Text>
-                    <Text className="mt-1 text-white/50 text-sm">
-                      {uploadedVideoUri ? "From Device" : "From Camera"}
-                    </Text>
+                    <Text className="mt-2 text-white/70">Recording Complete</Text>
+                    <Text className="mt-1 text-white/50 text-sm">From Camera</Text>
                     <Text className="mt-1 text-white/40 text-xs">
                       Ready for AI analysis
                     </Text>
                   </View>
                   <TouchableOpacity
-                    className="mb-3 rounded-xl bg-blue-500 px-6 py-4"
-                    onPress={handleUploadVideo}
-                    activeOpacity={0.8}
-                  >
-                    <Text className="text-center text-lg font-semibold text-white">
-                      📱 Upload Different Video
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
                     className="mb-3 rounded-xl bg-white/20 px-6 py-4"
                     onPress={() => {
                       setHasRecorded(false);
                       setIsRecording(false);
-                      setUploadedVideoUri(null);
                       setRecordedVideoUri(null);
                     }}
                     activeOpacity={0.8}

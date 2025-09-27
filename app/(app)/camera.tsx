@@ -22,7 +22,7 @@ try {
 export default function CameraScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { exercise, duration, testId, returnTo } = params;
+  const { exercise, duration, testId, returnTo, mode } = params;
 
   // Ensure testId is a string
   const testIdStr =
@@ -45,8 +45,10 @@ export default function CameraScreen() {
   const [isCountdown, setIsCountdown] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const captureMode = (typeof mode === "string" ? mode : Array.isArray(mode) ? mode[0] : undefined) === "photo" ? "photo" : "video";
   const maxDuration = parseInt(duration?.toString().replace(/\D/g, "") || "30");
 
   const handleGoBack = () => {
@@ -101,6 +103,33 @@ export default function CameraScreen() {
     setCountdown(3);
   };
 
+  const takePhoto = async () => {
+    try {
+      if (CameraView && cameraRef.current) {
+        const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+        setPhotoUri(photo?.uri);
+        // Navigate back to test with face image URI
+        if (returnTo === "test" && testIdStr) {
+          router.replace({
+            pathname: "/(app)/test/[id]",
+            params: {
+              id: testIdStr,
+              faceImageUri: photo?.uri,
+            },
+          });
+        } else {
+          Alert.alert("Photo Captured", "Returning to assessment.");
+          router.replace("/(app)/assessment");
+        }
+      } else {
+        Alert.alert("Camera", "Camera not available to take photo.");
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "Failed to capture photo");
+    }
+  };
+
   const startRecording = async () => {
     try {
       setIsRecording(true);
@@ -152,7 +181,12 @@ export default function CameraScreen() {
               // Return to test screen with recording complete flag
               router.replace({
                 pathname: "/(app)/test/[id]",
-                params: { id: testIdStr, recordingComplete: "true" },
+                params: {
+                  id: testIdStr,
+                  recordingComplete: "true",
+                  // pass the recorded video URI back to TestScreen
+                  videoUri: recordingUri || undefined,
+                },
               });
             } else {
               // Return to assessment screen
@@ -192,11 +226,10 @@ export default function CameraScreen() {
             <View className="h-80 w-80 rounded-2xl bg-gray-700 items-center justify-center border-2 border-dashed border-gray-500 mb-6">
               <Text className="text-6xl mb-4">📱</Text>
               <Text className="text-white text-lg font-semibold mb-2">
-                Camera Simulation
+                {captureMode === "photo" ? "Face Capture Simulation" : "Camera Simulation"}
               </Text>
               <Text className="text-white/70 text-center px-8">
-                Camera module is being loaded. In demo mode, this simulates
-                recording.
+                Camera module is being loaded. In demo mode, this simulates {captureMode === "photo" ? "photo capture" : "recording"}.
               </Text>
             </View>
 
@@ -222,11 +255,13 @@ export default function CameraScreen() {
             {/* Instructions */}
             <View className="mb-6 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
               <Text className="text-white text-center text-base mb-2">
-                {isRecording
-                  ? `Performing ${exercise || "exercise"} simulation...`
-                  : `Ready to simulate ${exercise || "your exercise"}?`}
+                {captureMode === "photo"
+                  ? "Ready to capture your face image?"
+                  : isRecording
+                    ? `Performing ${exercise || "exercise"} simulation...`
+                    : `Ready to simulate ${exercise || "your exercise"}?`}
               </Text>
-              {!isRecording && (
+              {captureMode !== "photo" && !isRecording && (
                 <Text className="text-white/70 text-center text-sm">
                   Camera module loading... Tap record button to simulate
                 </Text>
@@ -235,28 +270,40 @@ export default function CameraScreen() {
 
             {/* Control Buttons */}
             <View className="flex-row justify-center space-x-8">
-              {!isRecording && !isCountdown && (
+              {captureMode === "photo" ? (
                 <TouchableOpacity
-                  onPress={startCountdown}
-                  className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
+                  onPress={takePhoto}
+                  className="h-20 w-20 rounded-full bg-blue-500 items-center justify-center shadow-lg"
                   activeOpacity={0.8}
                 >
                   <View className="h-8 w-8 rounded-full bg-white" />
                 </TouchableOpacity>
-              )}
+              ) : (
+                <>
+                  {!isRecording && !isCountdown && (
+                    <TouchableOpacity
+                      onPress={startCountdown}
+                      className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
+                      activeOpacity={0.8}
+                    >
+                      <View className="h-8 w-8 rounded-full bg-white" />
+                    </TouchableOpacity>
+                  )}
 
-              {isRecording && (
-                <TouchableOpacity
-                  onPress={stopRecording}
-                  className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
-                  activeOpacity={0.8}
-                >
-                  <View className="h-10 w-10 rounded bg-white" />
-                </TouchableOpacity>
+                  {isRecording && (
+                    <TouchableOpacity
+                      onPress={stopRecording}
+                      className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
+                      activeOpacity={0.8}
+                    >
+                      <View className="h-10 w-10 rounded bg-white" />
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </View>
-          </View>
-        </SafeAreaView>
+        </View>
+      </SafeAreaView>
       ) : !permission?.granted ? (
         /* Handle permissions */
         <SafeAreaView className="flex-1 items-center justify-center px-6">
@@ -305,10 +352,10 @@ export default function CameraScreen() {
 
                   <View className="items-center">
                     <Text className="text-white font-bold text-lg">
-                      {exercise || "Exercise Recording"}
+                      {captureMode === "photo" ? "Face Verification" : exercise || "Exercise Recording"}
                     </Text>
                     <Text className="text-white/80 text-sm">
-                      {duration || "Recording Duration"}
+                      {captureMode === "photo" ? "Capture a clear face photo" : duration || "Recording Duration"}
                     </Text>
                     {testIdStr && (
                       <Text className="text-white/60 text-xs mt-1">
@@ -342,26 +389,30 @@ export default function CameraScreen() {
               )}
 
               {/* Timer */}
-              <View className="absolute top-32 left-6 right-6 items-center">
-                {isRecording && (
-                  <View className="rounded-full bg-red-500/80 px-6 py-3">
-                    <Text className="text-white font-bold text-xl">
-                      🔴 {formatTime(timer)} / {formatTime(maxDuration)}
-                    </Text>
-                  </View>
-                )}
-              </View>
+              {captureMode !== "photo" && (
+                <View className="absolute top-32 left-6 right-6 items-center">
+                  {isRecording && (
+                    <View className="rounded-full bg-red-500/80 px-6 py-3">
+                      <Text className="text-white font-bold text-xl">
+                        🔴 {formatTime(timer)} / {formatTime(maxDuration)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* Bottom Controls */}
               <View className="absolute bottom-0 left-0 right-0 px-6 pb-8">
                 {/* Instructions */}
                 <View className="mb-6 rounded-2xl bg-black/50 p-4 backdrop-blur-sm">
                   <Text className="text-white text-center text-base mb-2">
-                    {isRecording
-                      ? `Perform ${exercise || "your exercise"} now!`
-                      : `Ready to record ${exercise || "your exercise"}?`}
+                    {captureMode === "photo"
+                      ? "Align your face in the frame and tap the capture button"
+                      : isRecording
+                        ? `Perform ${exercise || "your exercise"} now!`
+                        : `Ready to record ${exercise || "your exercise"}?`}
                   </Text>
-                  {!isRecording && (
+                  {captureMode !== "photo" && !isRecording && (
                     <Text className="text-white/70 text-center text-sm">
                       {testIdStr === "vertical-jump"
                         ? "Position yourself sideways to the camera, keep hands on hips"
@@ -378,24 +429,36 @@ export default function CameraScreen() {
 
                 {/* Control Buttons */}
                 <View className="flex-row justify-center space-x-8">
-                  {!isRecording && !isCountdown && (
+                  {captureMode === "photo" ? (
                     <TouchableOpacity
-                      onPress={startCountdown}
-                      className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
+                      onPress={takePhoto}
+                      className="h-20 w-20 rounded-full bg-blue-500 items-center justify-center shadow-lg"
                       activeOpacity={0.8}
                     >
                       <View className="h-8 w-8 rounded-full bg-white" />
                     </TouchableOpacity>
-                  )}
+                  ) : (
+                    <>
+                      {!isRecording && !isCountdown && (
+                        <TouchableOpacity
+                          onPress={startCountdown}
+                          className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
+                          activeOpacity={0.8}
+                        >
+                          <View className="h-8 w-8 rounded-full bg-white" />
+                        </TouchableOpacity>
+                      )}
 
-                  {isRecording && (
-                    <TouchableOpacity
-                      onPress={stopRecording}
-                      className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
-                      activeOpacity={0.8}
-                    >
-                      <View className="h-10 w-10 rounded bg-white" />
-                    </TouchableOpacity>
+                      {isRecording && (
+                        <TouchableOpacity
+                          onPress={stopRecording}
+                          className="h-20 w-20 rounded-full bg-red-500 items-center justify-center shadow-lg"
+                          activeOpacity={0.8}
+                        >
+                          <View className="h-10 w-10 rounded bg-white" />
+                        </TouchableOpacity>
+                      )}
+                    </>
                   )}
                 </View>
               </View>
