@@ -13,11 +13,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useVideoSubmission } from "../../../hooks/useVideoSubmission";
-import { useFaceVerification } from "../../../hooks/useFaceVerification";
+import { useFaceVerification } from "../../../hooks/useFaceVerification"; 
 
 export default function TestScreen() {
   const router = useRouter();
-  const { testId, recordingComplete, videoUri, faceImageUri } = useLocalSearchParams();
+  const { 
+    id,
+    testId, 
+    recordingComplete, 
+    videoUri, 
+    faceImageUri, 
+    faceVerificationVideoUri 
+  } = useLocalSearchParams();
+  
   const [isRecording, setIsRecording] = useState(false);
   const [hasRecorded, setHasRecorded] = useState(false);
   const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
@@ -27,55 +35,125 @@ export default function TestScreen() {
   const { submitVideo, isSubmitting, progress } = useVideoSubmission();
   const { verifyFace, isVerifying } = useFaceVerification();
 
-  // Ensure testId is a string
+  // Ensure testId is a string, supporting both dynamic route param `id` and optional `testId`
   const testIdStr =
     typeof testId === "string"
       ? testId
-      : Array.isArray(testId)
-        ? testId[0]
-        : undefined;
-
-  // Check if returning from camera with completed recording
+      : typeof id === "string"
+        ? id
+        : Array.isArray(testId)
+          ? testId[0]
+          : Array.isArray(id)
+            ? id[0]
+            : undefined;
+  console.log("Test ID:", testIdStr);
   useFocusEffect(
     useCallback(() => {
-      // Handle face image returned from camera for verification
-      const maybeVerify = async () => {
-        if (typeof faceImageUri === "string") {
+      console.log("=== useFocusEffect triggered ===");
+      console.log("faceImageUri:", faceImageUri);
+      // console.log("faceVerificationVideoUri:", faceVerificationVideoUri);
+      console.log("recordingComplete:", recordingComplete);
+      console.log("videoUri:", videoUri);
+      
+      // Handle face image (extracted frame from video)
+      const processFaceImage = async () => {
+        if (typeof faceImageUri === "string" && faceImageUri !== "extracting") {
+          console.log("=== FACE VERIFICATION WITH IMAGE STARTED ===");
+          console.log("Processing face image:", faceImageUri);
+          
           try {
+            console.log("Calling verifyFace with extracted image...");
+            
+            // Verify the extracted image directly
             const res = await verifyFace(faceImageUri);
+            
+            console.log("Face verification result:", res);
+            
             if (res.success && res.verified) {
+              console.log("✅ Face verification successful");
               setIsFaceVerified(true);
-              Alert.alert("Face Verification", "Verification successful. You can proceed to Sit-ups recording.");
+              Alert.alert(
+                "Face Verification Successful!", 
+                "Your face has been verified. You can now proceed to record your sit-ups exercise.",
+                [{ text: "Continue", style: "default" }]
+              );
             } else {
+              console.log("❌ Face verification failed:", res.error);
               setIsFaceVerified(false);
-              Alert.alert("Face Verification Failed", res.error || "Your face could not be verified. Please try again.");
+              Alert.alert(
+                "Face Verification Failed", 
+                res.error || "Your face could not be verified from the image. Please try again with better lighting and ensure your face is clearly visible.",
+                [
+                  { text: "Try Again", onPress: () => handleStartFaceVerification() },
+                  { text: "Cancel", style: "cancel" }
+                ]
+              );
             }
           } catch (e) {
             setIsFaceVerified(false);
-            Alert.alert("Face Verification Error", "An error occurred during verification. Please try again.");
+            console.error("Face verification exception:", e);
+            Alert.alert(
+              "Face Verification Error", 
+              "An error occurred during face verification. Please try again.",
+              [
+                { text: "Try Again", onPress: () => handleStartFaceVerification() },
+                { text: "Cancel", style: "cancel" }
+              ]
+            );
           } finally {
+            console.log("Clearing faceImageUri param");
             // Clear the param to prevent re-triggering
             router.setParams({ faceImageUri: undefined });
           }
+        } else if (faceImageUri === "extracting") {
+          console.log("Frame extraction still in progress...");
+          // Could show a loading state here if needed
+        } else {
+          console.log("No face image URI found");
         }
       };
-      maybeVerify();
 
-      if (recordingComplete === "true") {
-        // Set recorded video URI from camera params
-        const recUri = typeof videoUri === "string" ? videoUri : null;
-        setRecordedVideoUri(recUri);
-        setHasRecorded(true);
-        // Clear the param to prevent triggering again
-        router.setParams({ recordingComplete: undefined, videoUri: undefined });
-        // Auto-submit once we have a recording
-        if (recUri) {
-          // Defer to allow state updates to flush before submit
-          setTimeout(() => {
-            handleSubmitTest();
-          }, 0);
+      // Legacy video-based verification removed; image-based verification is used instead
+
+      // Handle exercise recording completion
+      const handleExerciseRecording = () => {
+        if (recordingComplete === "true") {
+          // Set recorded video URI from camera params
+          const recUri = typeof videoUri === "string" ? videoUri : null;
+          setRecordedVideoUri(recUri);
+          setHasRecorded(true);
+          
+          // Clear the param to prevent triggering again
+          router.setParams({ recordingComplete: undefined, videoUri: undefined });
+          
+          // Show success message and ask user to submit
+          if (recUri) {
+            Alert.alert(
+              "Exercise Recording Complete!",
+              "Your sit-ups video has been recorded successfully and converted to MP4 format. Ready to submit for AI analysis?",
+              [
+                {
+                  text: "Submit Now",
+                  onPress: () => {
+                    setTimeout(() => {
+                      handleSubmitTest();
+                    }, 100);
+                  }
+                },
+                {
+                  text: "Review First",
+                  style: "cancel"
+                }
+              ]
+            );
+          }
         }
-      }
+      };
+
+      // Execute all handlers - prioritize face image over face video
+      processFaceImage();
+      handleExerciseRecording();
+
     }, [recordingComplete, videoUri, faceImageUri])
   );
 
@@ -183,14 +261,15 @@ export default function TestScreen() {
   };
 
   const handleStartFaceVerification = () => {
-    // Navigate to camera in photo mode for face verification
+    // Navigate to camera in VIDEO mode for face verification (not photo)
     router.push({
       pathname: "/(app)/camera",
       params: {
         exercise: "Face Verification",
+        duration: "10 seconds", // Short video for face verification
         testId: testIdStr,
         returnTo: "test",
-        mode: "photo",
+        mode: "video", // Changed from "photo" to "video"
       },
     });
   };
@@ -211,7 +290,18 @@ export default function TestScreen() {
       return;
     }
 
+    // Validate that the video is in MP4 format
+    if (!videoUriToSend.toLowerCase().includes('.mp4')) {
+      Alert.alert(
+        "Video Format Error", 
+        "The video must be in MP4 format. Please record again.",
+        [{ text: "Record Again", onPress: () => setHasRecorded(false) }]
+      );
+      return;
+    }
+
     try {
+      console.log("Submitting MP4 video:", videoUriToSend);
       const result = await submitVideo(videoUriToSend, testIdStr || "sit-ups");
 
       if (result.success) {
@@ -328,40 +418,56 @@ export default function TestScreen() {
                 <Text className="mb-1 text-sm font-semibold text-white/80">Step 1</Text>
                 <Text className="mb-2 text-xl font-bold text-white">Face Verification</Text>
                 <Text className="mb-4 text-sm text-white/70">
-                  Please verify your face before proceeding to Sit-ups recording.
+                  Record a short video of your face for verification before proceeding to exercise recording.
                 </Text>
                 <View className="mb-4 rounded-xl bg-black/30 p-4 items-center">
-                  <Text className="text-5xl">🙂</Text>
+                  <Text className="text-5xl">🎥</Text>
                   <Text className="mt-2 text-white/80">
-                    {isFaceVerified ? "Verified" : isVerifying ? "Verifying..." : "Not Verified"}
+                    {isFaceVerified 
+                      ? "✅ Face Verified" 
+                      : isVerifying 
+                        ? "🔄 Verifying..." 
+                        : "❌ Not Verified"}
                   </Text>
+                  {isVerifying && (
+                    <Text className="mt-1 text-white/60 text-xs">
+                      Processing verification...
+                    </Text>
+                  )}
                 </View>
                 {!isFaceVerified && (
                   <TouchableOpacity
                     className="rounded-xl bg-blue-500 px-6 py-4 shadow-lg"
                     onPress={handleStartFaceVerification}
-                    disabled={isVerifying}
                     activeOpacity={0.8}
                   >
                     <Text className="text-center text-lg font-semibold text-white">
-                      {isVerifying ? "Verifying..." : "Start Face Verification"}
+                      {isVerifying ? "Processing..." : "🎬 Record Face Verification Video"}
                     </Text>
                   </TouchableOpacity>
+                )}
+                {isFaceVerified && (
+                  <View className="rounded-xl bg-green-500/20 px-6 py-4 border border-green-500/30">
+                    <Text className="text-center text-lg font-semibold text-green-300">
+                      Face verification complete! You can now record your exercise.
+                    </Text>
+                  </View>
                 )}
               </View>
             </View>
           )}
 
-          {/* Sit-up Recording Section */}
-          {/* Camera Section */}
+          {/* Exercise Recording Section */}
           <View className="mx-6 mb-6">
             <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
-              <Text className="mb-1 text-sm font-semibold text-white/80">{testIdStr === "sit-ups" ? "Step 2" : ""}</Text>
+              <Text className="mb-1 text-sm font-semibold text-white/80">
+                {testIdStr === "sit-ups" ? "Step 2" : ""}
+              </Text>
               <Text className="mb-4 text-xl font-bold text-white">
-                {testIdStr === "sit-ups" ? "Sit-ups Recording" : "Video Recording"}
+                {testIdStr === "sit-ups" ? "Exercise Recording" : "Video Recording"}
               </Text>
               <Text className="mb-4 text-sm text-white/70">
-                💡 Record your test using the camera. Upload from device is disabled.
+                Record your exercise performance. The video will be converted to MP4 format automatically.
               </Text>
 
               {!hasRecorded ? (
@@ -373,8 +479,8 @@ export default function TestScreen() {
                     <Text className="text-6xl">🎥</Text>
                     <Text className="mt-2 text-white/70">
                       {testIdStr === "sit-ups" && !isFaceVerified
-                        ? "Face verification required"
-                        : "Ready to Submit"}
+                        ? "Complete face verification first"
+                        : "Ready to record exercise"}
                     </Text>
                     <Text className="mt-1 text-white/50 text-sm">
                       Duration: {" "}
@@ -386,9 +492,16 @@ export default function TestScreen() {
                             ? "30 seconds"
                             : "1 minute"}
                     </Text>
+                    <Text className="mt-1 text-white/40 text-xs">
+                      Will be converted to MP4 format
+                    </Text>
                   </View>
                   <TouchableOpacity
-                    className="rounded-xl bg-red-500 px-6 py-4 shadow-lg"
+                    className={`rounded-xl px-6 py-4 shadow-lg ${
+                      (testIdStr === "sit-ups" && !isFaceVerified) || isRecording
+                        ? "bg-gray-500"
+                        : "bg-red-500"
+                    }`}
                     onPress={handleStartRecording}
                     disabled={
                       isRecording || (testIdStr === "sit-ups" && !isFaceVerified)
@@ -398,20 +511,19 @@ export default function TestScreen() {
                     <Text className="text-center text-lg font-semibold text-white">
                       {testIdStr === "sit-ups" && !isFaceVerified
                         ? "Complete Face Verification First"
-                        : "🎬 Start Camera Recording"}
+                        : "🎬 Start Exercise Recording"}
                     </Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
                   <Text className="mb-4 text-center text-white/90">
-                    Great! Your {currentTest.title.toLowerCase()} has been
-                    recorded
+                    Exercise recording completed successfully!
                   </Text>
                   <View className="mb-4 h-48 items-center justify-center rounded-xl bg-black/30">
                     <Text className="text-6xl">✅</Text>
                     <Text className="mt-2 text-white/70">Recording Complete</Text>
-                    <Text className="mt-1 text-white/50 text-sm">From Camera</Text>
+                    <Text className="mt-1 text-white/50 text-sm">MP4 Format</Text>
                     <Text className="mt-1 text-white/40 text-xs">
                       Ready for AI analysis
                     </Text>
@@ -455,9 +567,9 @@ export default function TestScreen() {
               )}
               <Text className="text-center text-lg font-semibold text-white">
                 {isSubmitting
-                  ? `Analyzing...`
+                  ? `Analyzing MP4 Video...${progress > 0 ? ` ${progress}%` : ''}`
                   : hasRecorded
-                    ? "Submit for AI Analysis"
+                    ? "Submit MP4 for AI Analysis"
                     : "Complete Recording First"}
               </Text>
             </View>
@@ -468,8 +580,16 @@ export default function TestScreen() {
                 🤖 AI is analyzing your {currentTest.title.toLowerCase()}...
               </Text>
               <Text className="text-center text-white/60 text-xs mt-1">
-                This may take a few minutes
+                Processing MP4 video - This may take a few minutes
               </Text>
+              {progress > 0 && (
+                <View className="mt-2 bg-white/20 rounded-full h-2">
+                  <View 
+                    className="bg-green-500 h-2 rounded-full" 
+                    style={{ width: `${progress}%` }}
+                  />
+                </View>
+              )}
             </View>
           )}
         </View>

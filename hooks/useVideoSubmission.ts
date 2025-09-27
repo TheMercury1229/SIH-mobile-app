@@ -16,7 +16,7 @@ interface UseVideoSubmissionReturn {
   progress: number;
 }
 
-const API_BASE_URL = "https://prishaa-sports.hf.space";
+const API_BASE_URL = "https://e88adf18050a.ngrok-free.app";
 
 // Map test IDs to API exercise types
 const exerciseTypeMap: Record<string, string> = {
