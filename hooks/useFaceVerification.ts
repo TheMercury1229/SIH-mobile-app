@@ -13,7 +13,7 @@ interface UseFaceVerificationReturn {
   isVerifying: boolean;
 }
 
-const API_BASE_URL = "https://e88adf18050a.ngrok-free.app";
+const API_BASE_URL = "http://35.188.167.172:8000/recognize_faces";
 
 export const useFaceVerification = (): UseFaceVerificationReturn => {
   const [isVerifying, setIsVerifying] = useState(false);
@@ -40,7 +40,7 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       console.log("File details:", { uri: imageUri, type: 'image/jpeg', name: fileName });
 
       const response = await axios.post(
-        `${API_BASE_URL}/recognize_face`,
+        `${API_BASE_URL}`,
         formData,
         {
           headers: { 
@@ -89,10 +89,6 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
           message = "Face verification service error";
         } else if (e.message.includes("Network Error")) {
           message = "Network connection error";
-        } else if (e.response?.data?.error) {
-          message = e.response.data.error;
-        } else if (e.response?.data?.detail) {
-          message = e.response.data.detail;
         }
       } else {
         console.log("Non-axios error:", error);

@@ -1,8 +1,7 @@
-import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useCallback, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -47,115 +46,101 @@ export default function TestScreen() {
             ? id[0]
             : undefined;
   console.log("Test ID:", testIdStr);
-  useFocusEffect(
-    useCallback(() => {
-      console.log("=== useFocusEffect triggered ===");
-      console.log("faceImageUri:", faceImageUri);
-      // console.log("faceVerificationVideoUri:", faceVerificationVideoUri);
-      console.log("recordingComplete:", recordingComplete);
-      console.log("videoUri:", videoUri);
-      
-      // Handle face image (extracted frame from video)
-      const processFaceImage = async () => {
-        if (typeof faceImageUri === "string" && faceImageUri !== "extracting") {
-          console.log("=== FACE VERIFICATION WITH IMAGE STARTED ===");
-          console.log("Processing face image:", faceImageUri);
-          
-          try {
-            console.log("Calling verifyFace with extracted image...");
-            
-            // Verify the extracted image directly
-            const res = await verifyFace(faceImageUri);
-            
-            console.log("Face verification result:", res);
-            
-            if (res.success && res.verified) {
-              console.log("✅ Face verification successful");
-              setIsFaceVerified(true);
-              Alert.alert(
-                "Face Verification Successful!", 
-                "Your face has been verified. You can now proceed to record your sit-ups exercise.",
-                [{ text: "Continue", style: "default" }]
-              );
-            } else {
-              console.log("❌ Face verification failed:", res.error);
-              setIsFaceVerified(false);
-              Alert.alert(
-                "Face Verification Failed", 
-                res.error || "Your face could not be verified from the image. Please try again with better lighting and ensure your face is clearly visible.",
-                [
-                  { text: "Try Again", onPress: () => handleStartFaceVerification() },
-                  { text: "Cancel", style: "cancel" }
-                ]
-              );
-            }
-          } catch (e) {
-            setIsFaceVerified(false);
-            console.error("Face verification exception:", e);
+
+  // Handle face image verification when faceImageUri param changes
+  useEffect(() => {
+    const processFaceImage = async () => {
+      if (typeof faceImageUri === "string" && faceImageUri !== "extracting") {
+        console.log("=== FACE VERIFICATION WITH IMAGE STARTED ===");
+        console.log("Processing face image:", faceImageUri);
+
+        try {
+          console.log("Calling verifyFace with extracted image...");
+
+          const res = await verifyFace(faceImageUri);
+
+          console.log("Face verification result:", res);
+
+          // Treat recognition as verified if API returns success/recognized_faces even if `verified` is false
+          const apiData = (res as any)?.data?.success;
+          const recognized = apiData === true 
+
+          if ( recognized) {
+            console.log("✅ Face verification successful (recognized)");
+            setIsFaceVerified(true);
             Alert.alert(
-              "Face Verification Error", 
-              "An error occurred during face verification. Please try again.",
+              "Face Verified",
+              "Your face has been verified. You can proceed to record your sit-ups video.",
+              [{ text: "OK", style: "default" }]
+            );
+          } else {
+            console.log("❌ Face verification failed:", res.error);
+            setIsFaceVerified(false);
+            Alert.alert(
+              "Face Verification Failed",
+              res.error || "We couldn't verify your face. Please try again with better lighting and ensure your face is clearly visible.",
               [
                 { text: "Try Again", onPress: () => handleStartFaceVerification() },
                 { text: "Cancel", style: "cancel" }
               ]
             );
-          } finally {
-            console.log("Clearing faceImageUri param");
-            // Clear the param to prevent re-triggering
-            router.setParams({ faceImageUri: undefined });
           }
-        } else if (faceImageUri === "extracting") {
-          console.log("Frame extraction still in progress...");
-          // Could show a loading state here if needed
-        } else {
-          console.log("No face image URI found");
+        } catch (e) {
+          setIsFaceVerified(false);
+          console.error("Face verification exception:", e);
+          Alert.alert(
+            "Face Verification Error",
+            "An error occurred during face verification. Please try again.",
+            [
+              { text: "Try Again", onPress: () => handleStartFaceVerification() },
+              { text: "Cancel", style: "cancel" }
+            ]
+          );
+        } finally {
+          console.log("Clearing faceImageUri param");
+          // Clear the param to prevent re-triggering
+          router.setParams({ faceImageUri: undefined });
         }
-      };
+      } else if (faceImageUri === "extracting") {
+        console.log("Frame extraction still in progress...");
+      }
+    };
 
-      // Legacy video-based verification removed; image-based verification is used instead
+    processFaceImage();
+  }, [faceImageUri]);
 
-      // Handle exercise recording completion
-      const handleExerciseRecording = () => {
-        if (recordingComplete === "true") {
-          // Set recorded video URI from camera params
-          const recUri = typeof videoUri === "string" ? videoUri : null;
-          setRecordedVideoUri(recUri);
-          setHasRecorded(true);
-          
-          // Clear the param to prevent triggering again
-          router.setParams({ recordingComplete: undefined, videoUri: undefined });
-          
-          // Show success message and ask user to submit
-          if (recUri) {
-            Alert.alert(
-              "Exercise Recording Complete!",
-              "Your sit-ups video has been recorded successfully and converted to MP4 format. Ready to submit for AI analysis?",
-              [
-                {
-                  text: "Submit Now",
-                  onPress: () => {
-                    setTimeout(() => {
-                      handleSubmitTest();
-                    }, 100);
-                  }
-                },
-                {
-                  text: "Review First",
-                  style: "cancel"
-                }
-              ]
-            );
-          }
-        }
-      };
+  // Handle exercise recording completion when recordingComplete/videoUri change
+  useEffect(() => {
+    if (recordingComplete === "true") {
+      const recUri = typeof videoUri === "string" ? videoUri : null;
+      setRecordedVideoUri(recUri);
+      setHasRecorded(true);
 
-      // Execute all handlers - prioritize face image over face video
-      processFaceImage();
-      handleExerciseRecording();
+      // Clear the param to prevent triggering again
+      router.setParams({ recordingComplete: undefined, videoUri: undefined });
 
-    }, [recordingComplete, videoUri, faceImageUri])
-  );
+      if (recUri) {
+        Alert.alert(
+          "Exercise Recording Complete!",
+          "Your sit-ups video has been recorded successfully and converted to MP4 format. Ready to submit for AI analysis?",
+          [
+            {
+              text: "Submit Now",
+              onPress: () => {
+                setTimeout(() => {
+                  handleSubmitTest();
+                }, 100);
+              }
+            },
+            {
+              text: "Review First",
+              style: "cancel"
+            }
+          ]
+        );
+      }
+    }
+  }, [recordingComplete, videoUri]);
 
   const testData: Record<string, any> = {
     "vertical-jump": {
@@ -379,37 +364,6 @@ export default function TestScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
-          {/* Instructions */}
-          <View className="mx-6 mb-6">
-            <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
-              <Text className="mb-4 text-xl font-bold text-white">
-                Instructions
-              </Text>
-              {currentTest.instructions.map(
-                (instruction: string, index: number) => (
-                  <View key={index} className="mb-2 flex-row">
-                    <Text className="mr-2 text-white/90">{index + 1}.</Text>
-                    <Text className="flex-1 text-white/90">{instruction}</Text>
-                  </View>
-                )
-              )}
-            </View>
-          </View>
-
-          {/* Tips */}
-          <View className="mx-6 mb-6">
-            <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
-              <Text className="mb-4 text-xl font-bold text-white">
-                Pro Tips
-              </Text>
-              {currentTest.tips.map((tip: string, index: number) => (
-                <View key={index} className="mb-2 flex-row items-start">
-                  <Text className="mr-2 text-yellow-300">💡</Text>
-                  <Text className="flex-1 text-white/90">{tip}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
 
           {/* Face Verification Section (required for Sit-ups) */}
           {testIdStr === "sit-ups" && (

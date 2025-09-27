@@ -16,7 +16,7 @@ interface UseVideoSubmissionReturn {
   progress: number;
 }
 
-const API_BASE_URL = "https://e88adf18050a.ngrok-free.app";
+const API_BASE_URL = "http://35.188.167.172:8000/detect_from_video";
 
 // Map test IDs to API exercise types
 const exerciseTypeMap: Record<string, string> = {
@@ -59,7 +59,7 @@ export const useVideoSubmission = (): UseVideoSubmissionReturn => {
 
       // Make the API request
       const response = await axios.post(
-        `${API_BASE_URL}/detect_from_video`,
+        `${API_BASE_URL}`,
         formData,
         {
           params: {
