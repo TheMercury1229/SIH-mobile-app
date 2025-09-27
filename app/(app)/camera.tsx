@@ -9,12 +9,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 let CameraView: any = null;
 let CameraType: any = null;
 let useCameraPermissions: any = null;
+let useMicrophonePermissions: any = null;
 
 try {
   const cameraModule = require("expo-camera");
   CameraView = cameraModule.CameraView;
   CameraType = cameraModule.CameraType;
   useCameraPermissions = cameraModule.useCameraPermissions;
+  useMicrophonePermissions = cameraModule.useMicrophonePermissions;
 } catch (error) {
   console.log("Camera module not available, using fallback");
 }
@@ -36,6 +38,9 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions
     ? useCameraPermissions()
     : [null, null];
+  const [micPermission, requestMicPermission] = useMicrophonePermissions
+    ? useMicrophonePermissions()
+    : [null, null];
   const [facing, setFacing] = useState<"back" | "front">("back");
   const cameraRef = useRef<any>(null);
 
@@ -50,6 +55,23 @@ export default function CameraScreen() {
 
   const captureMode = (typeof mode === "string" ? mode : Array.isArray(mode) ? mode[0] : undefined) === "photo" ? "photo" : "video";
   const maxDuration = parseInt(duration?.toString().replace(/\D/g, "") || "30");
+  const needsMic = captureMode !== "photo"; // video needs mic for audio
+  const hasCamera = !!permission?.granted;
+  const hasMic = !needsMic || !!micPermission?.granted;
+
+  // helper to request all needed permissions together
+  const requestAllPermissions = async () => {
+    try {
+      if (!hasCamera && requestPermission) {
+        await requestPermission();
+      }
+      if (needsMic && !micPermission?.granted && requestMicPermission) {
+        await requestMicPermission();
+      }
+    } catch (e) {
+      console.warn("Permission request error", e);
+    }
+  };
 
   const handleGoBack = () => {
     if (returnTo === "test" && testIdStr) {
@@ -132,6 +154,14 @@ export default function CameraScreen() {
 
   const startRecording = async () => {
     try {
+      // Ensure permissions
+      if (!hasCamera && requestPermission) {
+        await requestPermission();
+      }
+      if (needsMic && !micPermission?.granted && requestMicPermission) {
+        await requestMicPermission();
+      }
+
       setIsRecording(true);
 
       if (CameraView && cameraRef.current) {
@@ -139,6 +169,8 @@ export default function CameraScreen() {
         const video = await cameraRef.current.recordAsync({
           maxDuration: maxDuration,
           quality: "720p",
+          // if mic permission still missing, record muted to avoid rejection
+          mute: needsMic && !micPermission?.granted ? true : false,
         });
 
         setRecordingUri(video.uri);
@@ -304,25 +336,26 @@ export default function CameraScreen() {
             </View>
         </View>
       </SafeAreaView>
-      ) : !permission?.granted ? (
+      ) : !hasCamera || !hasMic ? (
         /* Handle permissions */
         <SafeAreaView className="flex-1 items-center justify-center px-6">
           <View className="items-center space-y-6">
             <Text className="text-6xl">📱</Text>
             <Text className="text-white text-2xl font-bold text-center">
-              Camera Permission Required
+              {needsMic && !hasMic ? "Camera & Microphone Permissions Required" : "Camera Permission Required"}
             </Text>
             <Text className="text-white/80 text-center text-base">
-              We need access to your camera to record your exercise performance
-              for AI analysis.
+              {needsMic
+                ? "We need access to your camera and microphone to record your exercise performance for AI analysis."
+                : "We need access to your camera to capture your photo."}
             </Text>
             <TouchableOpacity
-              onPress={requestPermission}
+              onPress={requestAllPermissions}
               className="rounded-xl bg-blue-500 px-8 py-4"
               activeOpacity={0.8}
             >
               <Text className="text-white font-semibold text-lg">
-                Grant Camera Access
+                {needsMic ? "Grant Permissions" : "Grant Camera Access"}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
