@@ -1,11 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import {
-  ArrowLeft,
-  MessageSquare,
-  RefreshCw,
-  Shield,
-} from "lucide-react-native";
+import { ArrowLeft, RefreshCw, Shield } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -270,7 +265,7 @@ const OtpVerification = () => {
             </Text>
           </TouchableOpacity>
 
-          {/* Help Text */}
+          {/* Help Text
           <View
             className="rounded-xl p-4"
             style={{ backgroundColor: NovaTheme.colors.surface }}
@@ -302,7 +297,7 @@ const OtpVerification = () => {
                 </View>
               </View>
             </View>
-          </View>
+          </View> */}
         </View>
       </SafeAreaView>
     </KeyboardAvoidingView>

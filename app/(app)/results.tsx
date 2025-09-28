@@ -5,7 +5,8 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NovaTheme } from "../../theme/NovaTheme";
 
-interface FrameResult {
+// Legacy format (mock data)
+interface LegacyFrameResult {
   angle: number;
   counter: number;
   frame: number;
@@ -13,13 +14,50 @@ interface FrameResult {
   status: boolean;
 }
 
-interface ApiResponse {
+interface LegacyApiResponse {
   exercise_type: string;
   final_counter: number;
   final_status: boolean;
-  frame_results: FrameResult[];
+  frame_results: LegacyFrameResult[];
   total_frames: number;
 }
+
+// New API format (real sit-up API)
+interface CheatDetection {
+  is_cheating: boolean;
+  feet_cheat: boolean;
+  hand_cheat: boolean;
+  message: string;
+}
+
+interface NewFrameResult {
+  frame: number;
+  timestamp: number;
+  counter: number;
+  status: boolean;
+  angle: number;
+  cheat_detection: CheatDetection;
+}
+
+interface NewApiResponse {
+  success: boolean;
+  file_type: string;
+  total_frames_processed: number;
+  total_frames_in_video: number;
+  final_counter: number;
+  final_status: boolean;
+  processing_stopped: boolean;
+  frame_results: NewFrameResult[];
+  video_duration: number;
+  fps: number;
+  cheat_detected: boolean;
+  cheat_detected_at_frame?: number;
+  cheat_detected_at_time?: number;
+  error_message?: string;
+  message?: string;
+}
+
+type ApiResponse = LegacyApiResponse | NewApiResponse;
 
 export default function ResultsScreen() {
   const router = useRouter();
@@ -38,6 +76,11 @@ export default function ResultsScreen() {
     console.error("Failed to parse analysis data:", error);
   }
 
+  // Helper function to check if data is new API format
+  const isNewApiFormat = (data: ApiResponse): data is NewApiResponse => {
+    return "success" in data && "cheat_detected" in data;
+  };
+
   // Calculate performance metrics from API data
   const getPerformanceData = () => {
     if (!analysisData) {
@@ -50,54 +93,121 @@ export default function ResultsScreen() {
         avgAngle: 0,
         formAccuracy: 0,
         recommendations: ["No analysis data available"],
+        cheatDetected: false,
+        cheatMessage: null,
       };
     }
 
-    const { frame_results, exercise_type, total_frames } = analysisData;
-    const final_counter = 3;
-    // Calculate average angle during correct form
-    const correctFormFrames = frame_results.filter(
-      (frame) => frame.status && frame.landmarks_detected
-    );
-    const avgAngle =
-      correctFormFrames.length > 0
-        ? correctFormFrames.reduce((sum, frame) => sum + frame.angle, 0) /
-          correctFormFrames.length
-        : 0;
+    if (isNewApiFormat(analysisData)) {
+      // Handle new API format (real sit-up API)
+      const {
+        frame_results,
+        final_counter,
+        video_duration,
+        cheat_detected,
+        error_message,
+        total_frames_processed,
+      } = analysisData;
 
-    // Calculate form accuracy percentage
-    const detectedFrames = frame_results.filter(
-      (frame) => frame.landmarks_detected
-    );
-    const formAccuracy =
-      detectedFrames.length > 0
-        ? (correctFormFrames.length / detectedFrames.length) * 100
-        : 0;
+      // Calculate average angle during correct form
+      const correctFormFrames = frame_results.filter((frame) => frame.status);
+      const avgAngle =
+        correctFormFrames.length > 0
+          ? correctFormFrames.reduce((sum, frame) => sum + frame.angle, 0) /
+            correctFormFrames.length
+          : 0;
 
-    // Calculate overall score
-    const repScore = Math.min(
-      (final_counter / getExpectedReps(exercise_type)) * 100,
-      100
-    );
-    const formScore = formAccuracy;
-    const overallScore = Math.round(repScore * 0.6 + formScore * 0.4);
+      // Calculate form accuracy percentage
+      const formAccuracy =
+        frame_results.length > 0
+          ? (correctFormFrames.length / frame_results.length) * 100
+          : 0;
 
-    // Duration in seconds (assuming 30 FPS)
-    const durationSeconds = Math.round(total_frames / 30);
-    const duration = `${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, "0")}`;
+      // Calculate overall score (reduced if cheating detected)
+      const repScore = Math.min(
+        (final_counter / getExpectedReps("sit-up")) * 100,
+        100
+      );
+      const formScore = formAccuracy;
+      let overallScore = Math.round(repScore * 0.6 + formScore * 0.4);
 
-    return {
-      exercise: exercise_type
-        .replace("-", " ")
-        .replace(/\b\w/g, (l) => l.toUpperCase()),
-      score: overallScore,
-      reps: final_counter,
-      form: getFormQuality(formAccuracy),
-      duration,
-      avgAngle: Math.round(avgAngle),
-      formAccuracy: Math.round(formAccuracy),
-      recommendations: getRecommendations(analysisData),
-    };
+      // Penalize score if cheating detected
+      if (cheat_detected) {
+        overallScore = Math.max(overallScore - 30, 0);
+      }
+
+      const duration = `${Math.floor(video_duration / 60)}:${Math.floor(
+        video_duration % 60
+      )
+        .toString()
+        .padStart(2, "0")}`;
+
+      return {
+        exercise: "Sit-ups Test",
+        score: overallScore,
+        reps: final_counter,
+        form: getFormQuality(formAccuracy),
+        duration,
+        avgAngle: Math.round(avgAngle),
+        formAccuracy: Math.round(formAccuracy),
+        recommendations: getRecommendationsNew(analysisData),
+        cheatDetected: cheat_detected,
+        cheatMessage: error_message || null,
+        totalFrames: total_frames_processed,
+      };
+    } else {
+      // Handle legacy format (mock data)
+      const { frame_results, exercise_type, total_frames, final_counter } =
+        analysisData;
+
+      // Calculate average angle during correct form
+      const correctFormFrames = frame_results.filter(
+        (frame) =>
+          frame.status && (frame as LegacyFrameResult).landmarks_detected
+      );
+      const avgAngle =
+        correctFormFrames.length > 0
+          ? correctFormFrames.reduce((sum, frame) => sum + frame.angle, 0) /
+            correctFormFrames.length
+          : 0;
+
+      // Calculate form accuracy percentage
+      const detectedFrames = frame_results.filter(
+        (frame) => (frame as LegacyFrameResult).landmarks_detected
+      );
+      const formAccuracy =
+        detectedFrames.length > 0
+          ? (correctFormFrames.length / detectedFrames.length) * 100
+          : 0;
+
+      // Calculate overall score
+      const repScore = Math.min(
+        (final_counter / getExpectedReps(exercise_type)) * 100,
+        100
+      );
+      const formScore = formAccuracy;
+      const overallScore = Math.round(repScore * 0.6 + formScore * 0.4);
+
+      // Duration in seconds (assuming 30 FPS)
+      const durationSeconds = Math.round(total_frames / 30);
+      const duration = `${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, "0")}`;
+
+      return {
+        exercise: exercise_type
+          .replace("-", " ")
+          .replace(/\b\w/g, (l: string) => l.toUpperCase()),
+        score: overallScore,
+        reps: final_counter,
+        form: getFormQuality(formAccuracy),
+        duration,
+        avgAngle: Math.round(avgAngle),
+        formAccuracy: Math.round(formAccuracy),
+        recommendations: getRecommendations(analysisData as LegacyApiResponse),
+        cheatDetected: false,
+        cheatMessage: null,
+        totalFrames: total_frames,
+      };
+    }
   };
 
   const getExpectedReps = (exerciseType: string): number => {
@@ -120,7 +230,7 @@ export default function ResultsScreen() {
     return "Needs Improvement";
   };
 
-  const getRecommendations = (data: ApiResponse): string[] => {
+  const getRecommendations = (data: LegacyApiResponse): string[] => {
     const recommendations: string[] = [];
     const { frame_results, exercise_type, final_counter } = data;
 
@@ -163,6 +273,58 @@ export default function ResultsScreen() {
       recommendations.push(
         "Consider increasing difficulty or duration for continued progress"
       );
+    }
+
+    return recommendations;
+  };
+
+  const getRecommendationsNew = (data: NewApiResponse): string[] => {
+    const recommendations: string[] = [];
+    const { final_counter, cheat_detected, error_message, frame_results } =
+      data;
+
+    // Handle cheating detection
+    if (cheat_detected) {
+      recommendations.push("⚠️ Cheating detected during the exercise");
+      if (error_message?.includes("Hand")) {
+        recommendations.push("Avoid using your hands to assist the movement");
+        recommendations.push(
+          "Keep your hands behind your head or crossed on chest"
+        );
+      }
+      if (error_message?.includes("feet")) {
+        recommendations.push("Keep your feet flat on the ground throughout");
+      }
+      recommendations.push("Focus on proper form rather than speed");
+    }
+
+    // Form-based recommendations
+    const correctFormFrames = frame_results.filter((frame) => frame.status);
+    const formAccuracy =
+      (correctFormFrames.length / frame_results.length) * 100;
+
+    if (formAccuracy < 70) {
+      recommendations.push("Work on maintaining proper sit-up form");
+      recommendations.push("Engage your core muscles throughout the movement");
+    }
+
+    // Rep-based recommendations
+    if (final_counter < 10) {
+      recommendations.push("Build up your core strength with regular practice");
+      recommendations.push(
+        "Start with shorter sessions and gradually increase"
+      );
+    } else if (final_counter >= 20) {
+      recommendations.push("Excellent performance! Consider adding difficulty");
+    }
+
+    // General recommendations
+    if (!cheat_detected && formAccuracy >= 80) {
+      recommendations.push("Great form! Keep up the excellent technique");
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push("Good effort! Continue training consistently");
     }
 
     return recommendations;
@@ -251,9 +413,15 @@ export default function ResultsScreen() {
               <View className="flex-row justify-between">
                 <Text className="text-white/80">Total Frames:</Text>
                 <Text className="text-white font-semibold">
-                  {analysisData?.total_frames || "N/A"}
+                  {results.totalFrames || "N/A"}
                 </Text>
               </View>
+              {results.cheatDetected && (
+                <View className="flex-row justify-between">
+                  <Text className="text-red-400">Cheat Detected:</Text>
+                  <Text className="text-red-400 font-semibold">Yes</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -270,11 +438,7 @@ export default function ResultsScreen() {
                   <Text className="text-white">Repetitions</Text>
                   <Text className="text-white">
                     {Math.min(
-                      (results.reps /
-                        getExpectedReps(
-                          analysisData?.exercise_type || "sit-up"
-                        )) *
-                        100,
+                      (results.reps / getExpectedReps("sit-up")) * 100,
                       100
                     ).toFixed(0)}
                     %
@@ -284,7 +448,7 @@ export default function ResultsScreen() {
                   <View
                     className="h-2 bg-blue-400 rounded-full"
                     style={{
-                      width: `${Math.min((results.reps / getExpectedReps(analysisData?.exercise_type || "sit-up")) * 100, 100)}%`,
+                      width: `${Math.min((results.reps / getExpectedReps("sit-up")) * 100, 100)}%`,
                     }}
                   />
                 </View>
@@ -351,22 +515,34 @@ export default function ResultsScreen() {
                 <View className="flex-row justify-between">
                   <Text className="text-white/80">Landmarks Detected:</Text>
                   <Text className="text-white font-semibold">
-                    {
-                      analysisData.frame_results.filter(
-                        (f) => f.landmarks_detected
-                      ).length
-                    }{" "}
-                    / {analysisData.total_frames}
+                    {isNewApiFormat(analysisData)
+                      ? (analysisData as NewApiResponse).frame_results?.filter(
+                          (f: NewFrameResult) => true // New API always has frame data if processed
+                        ).length || 0
+                      : (
+                          analysisData as LegacyApiResponse
+                        ).frame_results?.filter(
+                          (f: LegacyFrameResult) => f.landmarks_detected
+                        ).length || 0}{" "}
+                    /{" "}
+                    {isNewApiFormat(analysisData)
+                      ? (analysisData as NewApiResponse).total_frames_processed
+                      : (analysisData as LegacyApiResponse).total_frames}
                   </Text>
                 </View>
                 <View className="flex-row justify-between">
                   <Text className="text-white/80">Correct Form Frames:</Text>
                   <Text className="text-white font-semibold">
-                    {
-                      analysisData.frame_results.filter(
-                        (f) => f.status && f.landmarks_detected
-                      ).length
-                    }
+                    {isNewApiFormat(analysisData)
+                      ? (analysisData as NewApiResponse).frame_results?.filter(
+                          (f: NewFrameResult) => f.status
+                        ).length || 0
+                      : (
+                          analysisData as LegacyApiResponse
+                        ).frame_results?.filter(
+                          (f: LegacyFrameResult) =>
+                            f.status && f.landmarks_detected
+                        ).length || 0}
                   </Text>
                 </View>
                 <View className="flex-row justify-between">
@@ -385,7 +561,10 @@ export default function ResultsScreen() {
                     className="space-y-1"
                     showsVerticalScrollIndicator={true}
                   >
-                    {analysisData.frame_results
+                    {(isNewApiFormat(analysisData)
+                      ? (analysisData as NewApiResponse).frame_results
+                      : (analysisData as LegacyApiResponse).frame_results
+                    )
                       .filter((_, index) => index % 10 === 0) // Show every 10th frame
                       .map((frame, index) => (
                         <View
@@ -406,6 +585,15 @@ export default function ResultsScreen() {
                           >
                             {frame.status ? "✓" : "✗"}
                           </Text>
+                          {isNewApiFormat(analysisData) &&
+                            (frame as NewFrameResult).cheat_detection && (
+                              <Text className="text-xs text-orange-400">
+                                {(frame as NewFrameResult).cheat_detection
+                                  .is_cheating
+                                  ? "⚠️"
+                                  : ""}
+                              </Text>
+                            )}
                         </View>
                       ))}
                   </ScrollView>

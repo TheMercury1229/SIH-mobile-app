@@ -281,55 +281,35 @@ export default function CameraScreen() {
           // Already navigated in startRecording after extraction; nothing else to do here
           return;
         } else if (isAssessmentRecording) {
-          // For assessment recording (matches face verification UX)
-          Alert.alert(
-            "Assessment Recording Complete!",
-            "Your assessment video has been recorded successfully.",
-            [
-              {
-                text: "Continue",
-                onPress: () => {
-                  if (returnTo === "test" && testIdStr && recordingUri) {
-                    router.replace({
-                      pathname: "/(app)/test/[id]",
-                      params: {
-                        id: testIdStr,
-                        recordingComplete: "true",
-                        videoUri: recordingUri,
-                      },
-                    });
-                  } else {
-                    router.replace("/(app)/assessment");
-                  }
-                },
+          // Auto-navigate for assessment recording (no popup)
+          console.log("Assessment recording complete, auto-navigating...");
+          if (returnTo === "test" && testIdStr && recordingUri) {
+            router.replace({
+              pathname: "/(app)/test/[id]",
+              params: {
+                id: testIdStr,
+                recordingComplete: "true",
+                videoUri: recordingUri,
               },
-            ]
-          );
+            });
+          } else {
+            router.replace("/(app)/assessment");
+          }
         } else {
-          // For legacy exercise recording
-          Alert.alert(
-            "Exercise Recording Complete!",
-            "Your exercise video has been recorded and converted to MP4 format.",
-            [
-              {
-                text: "Submit for Analysis",
-                onPress: () => {
-                  if (returnTo === "test" && testIdStr && recordingUri) {
-                    router.replace({
-                      pathname: "/(app)/test/[id]",
-                      params: {
-                        id: testIdStr,
-                        recordingComplete: "true",
-                        videoUri: recordingUri,
-                      },
-                    });
-                  } else {
-                    router.replace("/(app)/assessment");
-                  }
-                },
+          // Auto-navigate for legacy exercise recording (no popup)
+          console.log("Exercise recording complete, auto-navigating...");
+          if (returnTo === "test" && testIdStr && recordingUri) {
+            router.replace({
+              pathname: "/(app)/test/[id]",
+              params: {
+                id: testIdStr,
+                recordingComplete: "true",
+                videoUri: recordingUri,
               },
-            ]
-          );
+            });
+          } else {
+            router.replace("/(app)/assessment");
+          }
         }
       }, 2000); // Increased delay to ensure frame extraction completes
     } catch (error) {

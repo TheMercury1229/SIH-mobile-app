@@ -16,14 +16,27 @@ interface UseVideoSubmissionReturn {
   progress: number;
 }
 
-const API_BASE_URL = "http://35.188.167.172:8000/detect_from_video";
+const API_BASE_URL = "http://35.188.167.172:8000";
 
-// Map test IDs to API exercise types
-const exerciseTypeMap: Record<string, string> = {
-  "sit-ups": "sit-up",
-  "vertical-jump": "vertical-jump",
-  "shuttle-run": "shuttle-run",
-  "endurance-run": "endurance-run",
+// Map test IDs to API exercise types and endpoints
+const exerciseConfig: Record<string, { type: string; endpoint: string }> = {
+  "sit-ups": {
+    type: "sit-up",
+    endpoint:
+      "/calculate_situp?current_counter=0&current_status=false&break_on_cheat=true",
+  },
+  "vertical-jump": {
+    type: "vertical-jump",
+    endpoint: "/detect_from_video",
+  },
+  "shuttle-run": {
+    type: "shuttle-run",
+    endpoint: "/detect_from_video",
+  },
+  "endurance-run": {
+    type: "endurance-run",
+    endpoint: "/detect_from_video",
+  },
 };
 
 export const useVideoSubmission = (): UseVideoSubmissionReturn => {
@@ -38,15 +51,18 @@ export const useVideoSubmission = (): UseVideoSubmissionReturn => {
     setProgress(0);
 
     try {
-      // Map the exercise type to API format
-      const apiExerciseType = exerciseTypeMap[exerciseType] || exerciseType;
+      // Get exercise configuration
+      const config = exerciseConfig[exerciseType];
+      if (!config) {
+        throw new Error(`Unsupported exercise type: ${exerciseType}`);
+      }
 
       // Create form data
       const formData = new FormData();
 
       // For React Native, we need to create a file object
       const fileExtension = videoUri.split(".").pop() || "mp4";
-      const fileName = `exercise_video.${fileExtension}`;
+      const fileName = `${exerciseType}_video.${fileExtension}`;
 
       // Create file object for FormData
       const videoFile = {
@@ -57,30 +73,43 @@ export const useVideoSubmission = (): UseVideoSubmissionReturn => {
 
       formData.append("file", videoFile);
 
-      // Make the API request
-      const response = await axios.post(
-        `${API_BASE_URL}`,
-        formData,
-        {
-          params: {
-            exercise_type: apiExerciseType,
-          },
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              setProgress(percentCompleted);
-            }
-          },
-          timeout: 120000, // 2 minutes timeout
-        }
-      );
+      // Build the full URL
+      const fullUrl = `${API_BASE_URL}${config.endpoint}`;
 
-      //   setProgress(100);
+      // Make the API request
+      const response = await axios.post(fullUrl, formData, {
+        // Only add exercise_type param for non-situp exercises
+        params:
+          exerciseType !== "sit-ups"
+            ? {
+                exercise_type: config.type,
+              }
+            : undefined,
+        headers: {
+          "Content-Type": "multipart/form-data",
+          accept: "application/json",
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setProgress(percentCompleted);
+          }
+        },
+        timeout: 180000, // 3 minutes timeout for video processing
+      });
+
+      console.log("=== API RESPONSE RECEIVED ===");
+      console.log("Status:", response.status);
+      console.log("Headers:", response.headers);
+      console.log(
+        "Full Response Data:",
+        JSON.stringify(response.data, null, 2)
+      );
+      console.log("Response Keys:", Object.keys(response.data || {}));
+      console.log("=== END API RESPONSE ===");
+
       return {
         success: true,
         data: response.data,

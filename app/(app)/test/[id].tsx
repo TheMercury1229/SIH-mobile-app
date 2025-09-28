@@ -3,7 +3,6 @@ import { StatusBar } from "expo-status-bar";
 import {
   ArrowLeft,
   CheckCircle,
-  Play,
   RefreshCw,
   Video,
   XCircle,
@@ -18,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useVideoSubmission } from "../../../hooks/useVideoSubmission";
 import { NovaTheme } from "../../../theme/NovaTheme";
 
 export default function TestScreen() {
@@ -61,9 +61,8 @@ export default function TestScreen() {
     return durations[testIdStr ?? "sit-ups"] || 45; // default 45s
   };
 
-  // Mocked submission state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [progress, setProgress] = useState(0);
+  // Real API submission using the hook
+  const { submitVideo, isSubmitting, progress } = useVideoSubmission();
 
   // Ensure testId is a string, supporting both dynamic route param `id` and optional `testId`
   const testIdStr =
@@ -311,64 +310,107 @@ export default function TestScreen() {
     }
 
     try {
-      console.log("MOCKED: Submitting assessment video:", videoUriToSend);
-      setIsSubmitting(true);
-      setProgress(0);
+      console.log("Submitting assessment video:", videoUriToSend);
+      console.log("Exercise type:", testIdStr);
 
-      // Mock analysis data in the format expected by results page
-      const finalCounter = Math.floor(Math.random() * 20) + 15; // Random reps between 15-35
-      const totalFrames = Math.floor(Math.random() * 600) + 900; // Random frames (30-50 seconds at 30fps)
+      // For sit-ups, use real API. For others, use mock data
+      if (testIdStr === "sit-ups") {
+        // Use real API for sit-ups
+        const result = await submitVideo(videoUriToSend, "sit-ups");
 
-      // Generate mock frame results
-      const frameResults = [];
-      for (let i = 0; i < totalFrames; i += 10) {
-        // Sample every 10th frame
-        frameResults.push({
-          angle: Math.floor(Math.random() * 30) + 90, // Random angle between 90-120
-          counter: Math.floor((i / totalFrames) * finalCounter),
-          frame: i,
-          landmarks_detected: Math.random() > 0.1, // 90% landmark detection rate
-          status: Math.random() > 0.2, // 80% good form rate
+        if (result.success && result.data) {
+          console.log("=== SIT-UP ANALYSIS COMPLETE ===");
+          console.log("✅ Real API Response Success!");
+          console.log("Response Type:", typeof result.data);
+          console.log(
+            "Response Structure:",
+            JSON.stringify(result.data, null, 2)
+          );
+          console.log("Final Counter:", result.data.final_counter);
+          console.log("Final Status:", result.data.final_status);
+          console.log(
+            "Total Frames Processed:",
+            result.data.total_frames_processed
+          );
+          console.log(
+            "Frame Results Count:",
+            result.data.frame_results?.length || 0
+          );
+          if (
+            result.data.frame_results &&
+            result.data.frame_results.length > 0
+          ) {
+            console.log(
+              "Sample Frame Result:",
+              JSON.stringify(result.data.frame_results[0], null, 2)
+            );
+          }
+          console.log("=== END SIT-UP ANALYSIS ===");
+
+          // Navigate to results with real API data
+          router.push({
+            pathname: "/(app)/results",
+            params: {
+              testId: testIdStr,
+              analysisData: JSON.stringify(result.data),
+            },
+          });
+        } else {
+          // Handle API error
+          Alert.alert(
+            "Analysis Failed",
+            result.error ||
+              "Failed to analyze your sit-up video. Please try again.",
+            [{ text: "OK" }]
+          );
+        }
+      } else {
+        // Use mock data for other exercises (not implemented yet)
+        console.log("Using mock data for:", testIdStr);
+
+        // Mock analysis data in the old format for compatibility
+        const finalCounter = Math.floor(Math.random() * 20) + 15;
+        const totalFrames = Math.floor(Math.random() * 600) + 900;
+
+        const frameResults = [];
+        for (let i = 0; i < totalFrames; i += 10) {
+          frameResults.push({
+            angle: Math.floor(Math.random() * 30) + 90,
+            counter: Math.floor((i / totalFrames) * finalCounter),
+            frame: i,
+            landmarks_detected: Math.random() > 0.1,
+            status: Math.random() > 0.2,
+          });
+        }
+
+        const mockAnalysisData = {
+          exercise_type: testIdStr || "sit-up",
+          final_counter: finalCounter,
+          final_status: true,
+          frame_results: frameResults,
+          total_frames: totalFrames,
+          timestamp: new Date().toISOString(),
+          videoUri: videoUriToSend,
+        };
+
+        // Simulate progress for mock data
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        router.push({
+          pathname: "/(app)/results",
+          params: {
+            testId: testIdStr,
+            analysisData: JSON.stringify(mockAnalysisData),
+          },
         });
       }
-
-      const mockAnalysisData = {
-        exercise_type:
-          testIdStr === "sit-ups" ? "sit-up" : testIdStr || "sit-up",
-        final_counter: finalCounter,
-        final_status: true,
-        frame_results: frameResults,
-        total_frames: totalFrames,
-        timestamp: new Date().toISOString(),
-        videoUri: videoUriToSend,
-      };
-
-      // Simulate progress updates
-      for (let i = 20; i <= 100; i += 20) {
-        setProgress(i);
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-
-      console.log("✅ MOCKED: Analysis complete, navigating to results");
-
-      // Navigate directly to results with mocked data
-      router.push({
-        pathname: "/(app)/results",
-        params: {
-          testId: testIdStr,
-          analysisData: JSON.stringify(mockAnalysisData),
-        },
-      });
     } catch (error) {
-      console.error("Mock submission error:", error);
+      console.error("Submission error:", error);
       Alert.alert(
         "Submission Error",
         "An unexpected error occurred. Please try again.",
         [{ text: "OK" }]
       );
-    } finally {
-      setIsSubmitting(false);
-      setProgress(0);
     }
   };
 
@@ -561,10 +603,11 @@ export default function TestScreen() {
                     </Text>
                   </TouchableOpacity>
                 )}
-                {assessmentRecordingComplete && (
+                {assessmentRecordingComplete && !isSubmitting && (
                   <View className="rounded-xl bg-green-500/20 px-6 py-4 border border-green-500/30">
                     <Text className="text-center text-lg font-semibold text-green-300">
-                      Assessment recording complete! Ready for analysis.
+                      Assessment recording complete! Automatically submitting
+                      for AI analysis...
                     </Text>
                   </View>
                 )}
@@ -573,65 +616,43 @@ export default function TestScreen() {
           )}
         </ScrollView>
 
-        {/* Submit Button - Only show on assessment tab */}
-        {activeTab === "assessment" && (
+        {/* Submit Status - Only show on assessment tab when submitting */}
+        {activeTab === "assessment" && isSubmitting && (
           <View className="px-6 pb-6">
-            <TouchableOpacity
-              className="rounded-xl px-6 py-4 flex-row items-center justify-center"
-              style={{
-                backgroundColor:
-                  assessmentRecordingComplete && !isSubmitting
-                    ? NovaTheme.colors.success
-                    : NovaTheme.colors.surface,
-              }}
-              onPress={() => handleSubmitTest()}
-              disabled={!assessmentRecordingComplete || isSubmitting}
-              activeOpacity={0.8}
+            <View
+              className="rounded-xl p-4 flex-row items-center justify-center"
+              style={{ backgroundColor: NovaTheme.colors.surface }}
             >
-              {isSubmitting ? (
-                <ActivityIndicator
-                  size="small"
-                  color="white"
-                  className="mr-2"
-                />
-              ) : (
-                <Play size={20} color={NovaTheme.colors.textPrimary} />
-              )}
+              <ActivityIndicator size="small" color="white" className="mr-2" />
               <Text className="ml-2 text-center text-lg font-semibold text-white">
-                {isSubmitting
-                  ? `Analyzing Assessment...${progress > 0 ? ` ${progress}%` : ""}`
-                  : assessmentRecordingComplete
-                    ? "Submit Assessment for AI Analysis"
-                    : "Complete Assessment Recording First"}
+                {`Analyzing Assessment...${progress > 0 ? ` ${progress}%` : ""}`}
               </Text>
-            </TouchableOpacity>
-            {isSubmitting && (
-              <View
-                className="mt-3 rounded-xl p-4"
-                style={{ backgroundColor: NovaTheme.colors.surface }}
-              >
-                <Text className="text-center text-white/80 text-sm">
-                  AI is analyzing your {currentTest.title.toLowerCase()}...
-                </Text>
-                <Text className="text-center text-white/60 text-xs mt-1">
-                  Processing MP4 video - This may take a few minutes
-                </Text>
-                {progress > 0 && (
+            </View>
+            <View
+              className="mt-3 rounded-xl p-4"
+              style={{ backgroundColor: NovaTheme.colors.surface }}
+            >
+              <Text className="text-center text-white/80 text-sm">
+                AI is analyzing your {currentTest.title.toLowerCase()}...
+              </Text>
+              <Text className="text-center text-white/60 text-xs mt-1">
+                Processing MP4 video - This may take a few minutes
+              </Text>
+              {progress > 0 && (
+                <View
+                  className="mt-2 rounded-full h-2"
+                  style={{ backgroundColor: NovaTheme.colors.surfaceLight }}
+                >
                   <View
-                    className="mt-2 rounded-full h-2"
-                    style={{ backgroundColor: NovaTheme.colors.surfaceLight }}
-                  >
-                    <View
-                      className="h-2 rounded-full"
-                      style={{
-                        width: `${progress}%`,
-                        backgroundColor: NovaTheme.colors.success,
-                      }}
-                    />
-                  </View>
-                )}
-              </View>
-            )}
+                    className="h-2 rounded-full"
+                    style={{
+                      width: `${progress}%`,
+                      backgroundColor: NovaTheme.colors.success,
+                    }}
+                  />
+                </View>
+              )}
+            </View>
           </View>
         )}
       </SafeAreaView>
