@@ -60,11 +60,9 @@ export default function CameraScreen() {
     try {
       if (!hasCamera) {
         const cameraResult = await requestCameraPermission();
-        console.log("Camera permission result:", cameraResult.status);
       }
       if (needsMic && !micPermission?.granted) {
         const micResult = await requestMicPermission();
-        console.log("Microphone permission result:", micResult.status);
       }
     } catch (e) {
       console.warn("Permission request error", e);
@@ -150,7 +148,7 @@ export default function CameraScreen() {
     videoUri: string
   ): Promise<string | null> => {
     try {
-      console.log("Extracting frame from video:", videoUri);
+      
 
       // Extract a thumbnail/frame from the video at 2 second mark
       const { uri: frameUri } = await VideoThumbnails.getThumbnailAsync(
@@ -161,7 +159,7 @@ export default function CameraScreen() {
         }
       );
 
-      console.log("Frame extracted successfully:", frameUri);
+      
 
       // The frame is already saved by VideoThumbnails, just return the URI
       return frameUri;
@@ -190,8 +188,7 @@ export default function CameraScreen() {
         return;
       }
 
-      console.log("Starting video recording...");
-      console.log("Is face verification:", isFaceVerification);
+      
       setIsRecording(true);
       setTimer(0);
 
@@ -202,24 +199,24 @@ export default function CameraScreen() {
         mute: false, // Always record with audio for face verification videos
       };
 
-      console.log("Recording options:", recordingOptions);
+      
 
       // Start recording
       const video = await cameraRef.current.recordAsync(recordingOptions);
 
-      console.log("Recording completed:", video?.uri);
+      
 
       if (video?.uri) {
         setRecordingUri(video.uri);
-        console.log("Video URI set:", video.uri);
+        
 
         // If this is face verification, extract frame immediately and wait for it to complete
         if (isFaceVerification) {
-          console.log("Extracting frame for face verification...");
+          
           const frameUri = await extractFrameFromVideo(video.uri);
           if (frameUri) {
             setExtractedImageUri(frameUri);
-            console.log("Extracted image URI set:", frameUri);
+            
             // Immediately navigate back to the test screen with the extracted image URI
             navigateToTestWithFace(frameUri);
           } else {
@@ -263,7 +260,7 @@ export default function CameraScreen() {
   const stopRecording = async () => {
     try {
       if (cameraRef.current && isRecording) {
-        console.log("Stopping recording...");
+        
         cameraRef.current.stopRecording();
       }
 
@@ -272,17 +269,14 @@ export default function CameraScreen() {
 
       // Wait for recording to complete. For face verification, navigation already happened
       setTimeout(async () => {
-        console.log("Processing completed recording...");
-        console.log("Recording URI:", recordingUri);
-        console.log("Extracted Image URI:", extractedImageUri);
-        console.log("Is face verification:", isFaceVerification);
+        
 
         if (isFaceVerification) {
           // Already navigated in startRecording after extraction; nothing else to do here
           return;
         } else if (isAssessmentRecording) {
           // Auto-navigate for assessment recording (no popup)
-          console.log("Assessment recording complete, auto-navigating...");
+          
           if (returnTo === "test" && testIdStr && recordingUri) {
             router.replace({
               pathname: "/(app)/test/[id]",
@@ -297,7 +291,7 @@ export default function CameraScreen() {
           }
         } else {
           // Auto-navigate for legacy exercise recording (no popup)
-          console.log("Exercise recording complete, auto-navigating...");
+          
           if (returnTo === "test" && testIdStr && recordingUri) {
             router.replace({
               pathname: "/(app)/test/[id]",

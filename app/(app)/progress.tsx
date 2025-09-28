@@ -66,7 +66,6 @@ export default function ProgressScreen() {
 
   const handlePlayVideo = (testId: number) => {
     // In real app, this would open video player
-    console.log(`Playing video for test ${testId}`);
   };
 
   const formatDate = (dateString: string) => {

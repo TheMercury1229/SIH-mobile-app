@@ -16,7 +16,7 @@ interface UseVideoSubmissionReturn {
   progress: number;
 }
 
-const API_BASE_URL = "http://35.188.167.172:8000";
+const API_BASE_URL = "https://prishaa-sports.hf.space";
 
 // Map test IDs to API exercise types and endpoints
 const exerciseConfig: Record<string, { type: string; endpoint: string }> = {
@@ -100,15 +100,7 @@ export const useVideoSubmission = (): UseVideoSubmissionReturn => {
         timeout: 180000, // 3 minutes timeout for video processing
       });
 
-      console.log("=== API RESPONSE RECEIVED ===");
-      console.log("Status:", response.status);
-      console.log("Headers:", response.headers);
-      console.log(
-        "Full Response Data:",
-        JSON.stringify(response.data, null, 2)
-      );
-      console.log("Response Keys:", Object.keys(response.data || {}));
-      console.log("=== END API RESPONSE ===");
+      
 
       return {
         success: true,

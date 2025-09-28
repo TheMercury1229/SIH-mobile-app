@@ -64,6 +64,13 @@ export default function ResultsScreen() {
   const params = useLocalSearchParams();
   const [showFrameDetails, setShowFrameDetails] = useState(false);
 
+  // Optional explicit reps passed via params to avoid large JSON truncation
+  const finalCounterParam = (() => {
+    const v = params.finalCounter as string | undefined;
+    const n = v ? parseInt(v, 10) : NaN;
+    return Number.isFinite(n) ? n : undefined;
+  })();
+
   // Parse the analysis data from route params
   let analysisData: ApiResponse | null = null;
   let testId = params.testId as string;
@@ -87,7 +94,7 @@ export default function ResultsScreen() {
       return {
         exercise: "Assessment",
         score: 0,
-        reps: 0,
+        reps: finalCounterParam ?? 0,
         form: "No Data",
         duration: "N/A",
         avgAngle: 0,
@@ -145,7 +152,7 @@ export default function ResultsScreen() {
       return {
         exercise: "Sit-ups Test",
         score: overallScore,
-        reps: final_counter,
+        reps: finalCounterParam ?? final_counter,
         form: getFormQuality(formAccuracy),
         duration,
         avgAngle: Math.round(avgAngle),
@@ -197,7 +204,7 @@ export default function ResultsScreen() {
           .replace("-", " ")
           .replace(/\b\w/g, (l: string) => l.toUpperCase()),
         score: overallScore,
-        reps: final_counter,
+        reps: finalCounterParam ?? final_counter,
         form: getFormQuality(formAccuracy),
         duration,
         avgAngle: Math.round(avgAngle),

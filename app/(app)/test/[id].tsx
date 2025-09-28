@@ -55,7 +55,7 @@ export default function TestScreen() {
     const durations: Record<string, number> = {
       "vertical-jump": 60, // 1 minute for multiple attempts
       "shuttle-run": 30, // 30 seconds
-      "sit-ups": 60, // 1 minute
+      "sit-ups": 15, // 15 seconds
       "endurance-run": 45, // 45 seconds for setup/start
     };
     return durations[testIdStr ?? "sit-ups"] || 45; // default 45s
@@ -75,20 +75,19 @@ export default function TestScreen() {
           : Array.isArray(id)
             ? id[0]
             : undefined;
-  console.log("Test ID:", testIdStr);
+  
 
   // Handle face image verification when faceImageUri param changes
   useEffect(() => {
     const processFaceImage = async () => {
       if (typeof faceImageUri === "string" && faceImageUri !== "extracting") {
-        console.log("=== FACE VERIFICATION WITH IMAGE STARTED ===");
-        console.log("Processing face image:", faceImageUri);
+        
 
         try {
-          console.log("MOCKED: Face verification - always succeeds");
+          
 
           // Mock successful face verification (no API call)
-          console.log("✅ Face verification successful (mocked)");
+          
           setIsFaceVerified(true);
 
           // Auto-navigate to assessment tab without alert
@@ -103,12 +102,12 @@ export default function TestScreen() {
             setActiveTab("assessment");
           }, 500);
         } finally {
-          console.log("Clearing faceImageUri param");
+          
           // Clear the param to prevent re-triggering
           router.setParams({ faceImageUri: undefined });
         }
       } else if (faceImageUri === "extracting") {
-        console.log("Frame extraction still in progress...");
+        
       }
     };
 
@@ -125,26 +124,8 @@ export default function TestScreen() {
       // Clear the param to prevent triggering again
       router.setParams({ recordingComplete: undefined, videoUri: undefined });
 
-      if (recUri) {
-        Alert.alert(
-          "Exercise Recording Complete!",
-          "Your sit-ups video has been recorded successfully and converted to MP4 format. Ready to submit for AI analysis?",
-          [
-            {
-              text: "Submit Now",
-              onPress: () => {
-                setTimeout(() => {
-                  handleSubmitTest();
-                }, 100);
-              },
-            },
-            {
-              text: "Review First",
-              style: "cancel",
-            },
-          ]
-        );
-      }
+      // No popup here; assessment auto-submit is handled in the assessment
+      // recording completion effect when on the assessment tab.
     }
   }, [recordingComplete, videoUri]);
 
@@ -212,7 +193,7 @@ export default function TestScreen() {
         "Cross your arms over your chest or place hands behind head",
         "Engage your core and curl up until your elbows touch your knees",
         "Lower back down until your shoulder blades touch the ground",
-        "Perform as many complete repetitions as possible in 60 seconds",
+        "Perform as many complete repetitions as possible in 15 seconds",
         "Maintain proper form throughout - quality over quantity",
       ],
       tips: [
@@ -247,11 +228,13 @@ export default function TestScreen() {
     const duration =
       testIdStr === "endurance-run"
         ? "720" // 12 minutes
-        : testIdStr === "shuttle-run"
-          ? "30" // 30 seconds
-          : testIdStr === "vertical-jump"
-            ? "60" // 1 minute for vertical jump (3 attempts)
-            : "60"; // default 1 minute for sit-ups
+      : testIdStr === "shuttle-run"
+        ? "30" // 30 seconds
+      : testIdStr === "sit-ups"
+        ? "15" // 15 seconds for sit-ups
+      : testIdStr === "vertical-jump"
+        ? "60" // 1 minute for vertical jump (3 attempts)
+        : "15"; // default 15 seconds
 
     router.push({
       pathname: "/(app)/camera",
@@ -310,8 +293,6 @@ export default function TestScreen() {
     }
 
     try {
-      console.log("Submitting assessment video:", videoUriToSend);
-      console.log("Exercise type:", testIdStr);
 
       // For sit-ups, use real API. For others, use mock data
       if (testIdStr === "sit-ups") {
@@ -319,40 +300,15 @@ export default function TestScreen() {
         const result = await submitVideo(videoUriToSend, "sit-ups");
 
         if (result.success && result.data) {
-          console.log("=== SIT-UP ANALYSIS COMPLETE ===");
-          console.log("✅ Real API Response Success!");
-          console.log("Response Type:", typeof result.data);
-          console.log(
-            "Response Structure:",
-            JSON.stringify(result.data, null, 2)
-          );
-          console.log("Final Counter:", result.data.final_counter);
-          console.log("Final Status:", result.data.final_status);
-          console.log(
-            "Total Frames Processed:",
-            result.data.total_frames_processed
-          );
-          console.log(
-            "Frame Results Count:",
-            result.data.frame_results?.length || 0
-          );
-          if (
-            result.data.frame_results &&
-            result.data.frame_results.length > 0
-          ) {
-            console.log(
-              "Sample Frame Result:",
-              JSON.stringify(result.data.frame_results[0], null, 2)
-            );
-          }
-          console.log("=== END SIT-UP ANALYSIS ===");
-
+          console.log("the result data : ")
+          console.log(result.data);
           // Navigate to results with real API data
           router.push({
             pathname: "/(app)/results",
             params: {
               testId: testIdStr,
               analysisData: JSON.stringify(result.data),
+              finalCounter: String(result.data.final_counter),
             },
           });
         } else {
@@ -366,7 +322,6 @@ export default function TestScreen() {
         }
       } else {
         // Use mock data for other exercises (not implemented yet)
-        console.log("Using mock data for:", testIdStr);
 
         // Mock analysis data in the old format for compatibility
         const finalCounter = Math.floor(Math.random() * 20) + 15;
