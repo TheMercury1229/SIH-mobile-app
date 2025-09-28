@@ -38,6 +38,7 @@ const Register = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [adharNo, setAdharNo] = useState("");
 
   const sports = [
@@ -130,6 +131,14 @@ const Register = () => {
       Alert.alert("Error", "Passwords do not match");
       return false;
     }
+    if (
+      !phoneNumber ||
+      phoneNumber.length !== 10 ||
+      isNaN(Number(phoneNumber))
+    ) {
+      Alert.alert("Error", "Please enter a valid 10-digit phone number");
+      return false;
+    }
     if (!adharNo || adharNo.length !== 12 || isNaN(Number(adharNo))) {
       Alert.alert("Error", "Please enter a valid 12-digit Adhar number");
       return false;
@@ -149,7 +158,7 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
+      // Simulate API call for registration
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Create user object with all registration data
@@ -165,6 +174,7 @@ const Register = () => {
         height,
         weight,
         sport,
+        phoneNumber,
         adharNo,
         joinDate: new Date().toLocaleDateString(),
         // Initialize some default stats
@@ -174,19 +184,20 @@ const Register = () => {
         calories: "0",
       };
 
-      // Save user data and token to store
-      setUser(newUser);
-      setToken("registered-token");
+      // Navigate to OTP verification instead of completing registration
+      // In a real app, you would send OTP to the user's phone here
+      router.push({
+        pathname: "/(auth)/otp-verification",
+        params: {
+          userData: JSON.stringify(newUser),
+          phoneNumber: phoneNumber, // Use the actual phone number
+        },
+      });
 
       Alert.alert(
-        "Success",
-        "Registration successful! Welcome to Athletic Hub!",
-        [
-          {
-            text: "Continue",
-            onPress: () => router.replace("/(app)/home"),
-          },
-        ]
+        "OTP Sent",
+        "A verification code has been sent to your registered phone number. Please verify to complete registration.",
+        [{ text: "OK" }]
       );
     } catch (error) {
       Alert.alert("Error", "Registration failed. Please try again.");
@@ -449,6 +460,23 @@ const Register = () => {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry
+                  editable={!isLoading}
+                />
+              </View>
+
+              {/* Phone Number */}
+              <View className="space-y-2">
+                <Text className="text-base font-medium text-white/90">
+                  Phone Number
+                </Text>
+                <TextInput
+                  className="rounded-xl bg-white/10 px-4 py-4 text-base text-white backdrop-blur-sm"
+                  placeholder="Enter 10-digit phone number"
+                  placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="numeric"
+                  maxLength={10}
                   editable={!isLoading}
                 />
               </View>

@@ -24,6 +24,18 @@ export default function AuthLayout() {
           title: "Login",
         }}
       />
+      <Stack.Screen
+        name="register"
+        options={{
+          title: "Register",
+        }}
+      />
+      <Stack.Screen
+        name="otp-verification"
+        options={{
+          title: "Verify OTP",
+        }}
+      />
     </Stack>
   );
 }
