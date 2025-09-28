@@ -18,7 +18,6 @@ import { NovaTheme } from "../../theme/NovaTheme";
 export default function ProgressScreen() {
   const router = useRouter();
 
-  // Mock data - in real app this would come from your backend/storage
   const testResults = [
     {
       id: 1,

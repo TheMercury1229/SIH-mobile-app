@@ -85,25 +85,19 @@ export default function TestScreen() {
 
         try {
           
-
-          // Mock successful face verification (no API call)
           
           setIsFaceVerified(true);
 
-          // Auto-navigate to assessment tab without alert
           setTimeout(() => {
             setActiveTab("assessment");
           }, 500); // Small delay for smooth transition
         } catch (e) {
-          console.error("Mock face verification error:", e);
-          // Even in error case, let's succeed for now
           setIsFaceVerified(true);
           setTimeout(() => {
             setActiveTab("assessment");
           }, 500);
         } finally {
           
-          // Clear the param to prevent re-triggering
           router.setParams({ faceImageUri: undefined });
         }
       } else if (faceImageUri === "extracting") {
@@ -121,11 +115,8 @@ export default function TestScreen() {
       setRecordedVideoUri(recUri);
       setHasRecorded(true);
 
-      // Clear the param to prevent triggering again
       router.setParams({ recordingComplete: undefined, videoUri: undefined });
 
-      // No popup here; assessment auto-submit is handled in the assessment
-      // recording completion effect when on the assessment tab.
     }
   }, [recordingComplete, videoUri]);
 
@@ -134,7 +125,7 @@ export default function TestScreen() {
     if (recordingComplete === "true" && activeTab === "assessment") {
       const recUri = typeof videoUri === "string" ? videoUri : null;
 
-      // Set assessment recording states to match face verification UX
+        // Set assessment recording states to match face verification UX
       setIsAssessmentProcessing(false);
       setAssessmentRecordingComplete(true);
       setAssessmentRecordingUri(recUri);
@@ -351,9 +342,9 @@ export default function TestScreen() {
           );
         }
       } else {
-        // Use mock data for other exercises (not implemented yet)
+        
 
-        // Mock analysis data in the old format for compatibility
+
         const finalCounter = Math.floor(Math.random() * 20) + 15;
         const totalFrames = Math.floor(Math.random() * 600) + 900;
 

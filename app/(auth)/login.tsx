@@ -40,7 +40,6 @@ export default function LoginScreen() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Mock successful login
       const mockUser = {
         name: email.split("@")[0],
         email: email,

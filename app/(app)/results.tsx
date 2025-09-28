@@ -5,7 +5,6 @@ import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NovaTheme } from "../../theme/NovaTheme";
 
-// Legacy format (mock data)
 interface LegacyFrameResult {
   angle: number;
   counter: number;

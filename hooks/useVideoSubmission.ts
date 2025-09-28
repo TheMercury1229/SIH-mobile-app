@@ -23,7 +23,7 @@ const exerciseConfig: Record<string, { type: string; endpoint: string }> = {
   "sit-ups": {
     type: "sit-up",
     endpoint:
-      "/calculate_situp?current_counter=0&current_status=false&break_on_cheat=false",
+      "/calculate_situp?current_counter=0&current_status=false&break_on_cheat=true",
   },
   "vertical-jump": {
     type: "vertical-jump",
