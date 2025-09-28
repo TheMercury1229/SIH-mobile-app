@@ -1,4 +1,5 @@
-import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   Activity,
@@ -14,6 +15,11 @@ import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function AssessmentScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const cheatFlag = params.cheat === "1";
+  const cheatMsg = (params.msg as string) || "Cheating was detected. Please retry the test.";
+  const cheatTestId = (params.testId as string) || "sit-ups";
+  const [showCheatBanner, setShowCheatBanner] = useState(cheatFlag);
 
   const tests = [
     {
@@ -36,7 +42,7 @@ export default function AssessmentScreen() {
       id: "sit-ups",
       title: "Sit-ups Test",
       description: "Assess your core strength and endurance",
-      duration: "3 min",
+      duration: "15 sec",
       difficulty: "Easy",
       icon: Activity,
     },
@@ -52,6 +58,18 @@ export default function AssessmentScreen() {
 
   const handleTestSelect = (testId: string) => {
     router.push(`/(app)/test/${testId}` as any);
+  };
+
+  const handleDismissBanner = () => {
+    setShowCheatBanner(false);
+    // best-effort clear of params to avoid re-showing
+    try {
+      router.setParams({ cheat: undefined, msg: undefined, testId: undefined } as any);
+    } catch {}
+  };
+
+  const handleRetry = () => {
+    router.push({ pathname: "/(app)/test/[id]", params: { id: cheatTestId } } as any);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -95,6 +113,32 @@ export default function AssessmentScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
+          {/* Cheating Banner */}
+          {showCheatBanner && (
+            <View className="px-6 mb-4">
+              <View className="rounded-2xl border border-red-500/40 bg-red-500/15 p-4">
+                <Text className="text-red-300 font-semibold mb-1">Cheating detected</Text>
+                <Text className="text-red-200/90 mb-3">{cheatMsg}</Text>
+                <View className="flex-row justify-end space-x-3">
+                  <TouchableOpacity
+                    className="rounded-lg bg-white/10 px-4 py-2"
+                    onPress={handleDismissBanner}
+                    activeOpacity={0.8}
+                  >
+                    <Text className="text-white">Dismiss</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="rounded-lg px-4 py-2"
+                    style={{ backgroundColor: NovaTheme.colors.primary }}
+                    onPress={handleRetry}
+                    activeOpacity={0.85}
+                  >
+                    <Text className="text-white font-semibold">Retry {cheatTestId.replace("-"," ")}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
           <View className="px-6">
             {tests.map((test, index) => (
               <TouchableOpacity

@@ -208,7 +208,7 @@ export default function CameraScreen() {
 
       if (video?.uri) {
         setRecordingUri(video.uri);
-        
+        console.log("the video uri : " + video.uri);
 
         // If this is face verification, extract frame immediately and wait for it to complete
         if (isFaceVerification) {

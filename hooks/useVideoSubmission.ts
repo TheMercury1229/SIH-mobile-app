@@ -23,7 +23,7 @@ const exerciseConfig: Record<string, { type: string; endpoint: string }> = {
   "sit-ups": {
     type: "sit-up",
     endpoint:
-      "/calculate_situp?current_counter=0&current_status=false&break_on_cheat=true",
+      "/calculate_situp?current_counter=0&current_status=false&break_on_cheat=false",
   },
   "vertical-jump": {
     type: "vertical-jump",
@@ -49,7 +49,7 @@ export const useVideoSubmission = (): UseVideoSubmissionReturn => {
   ): Promise<VideoSubmissionResult> => {
     setIsSubmitting(true);
     setProgress(0);
-
+    console.log("the video uri in the submitVideo: " + videoUri);
     try {
       // Get exercise configuration
       const config = exerciseConfig[exerciseType];
@@ -100,7 +100,15 @@ export const useVideoSubmission = (): UseVideoSubmissionReturn => {
         timeout: 180000, // 3 minutes timeout for video processing
       });
 
-      
+      console.log("=== API RESPONSE RECEIVED ===");
+      console.log("Status:", response.status);
+      console.log("Headers:", response.headers);
+      console.log(
+        "Full Response Data:",
+        JSON.stringify(response.data, null, 2)
+      );
+      console.log("Response Keys:", Object.keys(response.data || {}));
+      console.log("=== END API RESPONSE ===");
 
       return {
         success: true,

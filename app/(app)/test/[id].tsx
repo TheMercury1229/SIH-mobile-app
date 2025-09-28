@@ -55,7 +55,7 @@ export default function TestScreen() {
     const durations: Record<string, number> = {
       "vertical-jump": 60, // 1 minute for multiple attempts
       "shuttle-run": 30, // 30 seconds
-      "sit-ups": 15, // 15 seconds
+      "sit-ups": 25, // 15 seconds
       "endurance-run": 45, // 45 seconds for setup/start
     };
     return durations[testIdStr ?? "sit-ups"] || 45; // default 45s
@@ -300,15 +300,45 @@ export default function TestScreen() {
         const result = await submitVideo(videoUriToSend, "sit-ups");
 
         if (result.success && result.data) {
-          console.log("the result data : ")
-          console.log(result.data);
+          const data = result.data;
+          console.log("the data : " + data);
+          const cheating = Boolean(
+            data.cheat_detected ||
+              (Array.isArray(data.frame_results) &&
+                data.frame_results.some(
+                  (f: any) => f?.cheat_detection?.is_cheating === true
+                ))
+          );
+
+          if (cheating) {
+            const msg =
+              data.error_message ||
+              data.message ||
+              "Cheating was detected in the video. Please retake the test.";
+            Alert.alert(
+              "Cheating Detected",
+              msg,
+              [
+                {
+                  text: "OK",
+                  onPress: () =>
+                    router.replace({
+                      pathname: "/(app)/assessment",
+                      params: { cheat: "1", testId: testIdStr || "sit-ups", msg },
+                    }),
+                },
+              ]
+            );
+            return;
+          }
+
           // Navigate to results with real API data
           router.push({
             pathname: "/(app)/results",
             params: {
               testId: testIdStr,
-              analysisData: JSON.stringify(result.data),
-              finalCounter: String(result.data.final_counter),
+              analysisData: JSON.stringify(data),
+              finalCounter: String(data.final_counter),
             },
           });
         } else {

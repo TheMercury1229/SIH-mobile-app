@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NovaTheme } from "../../theme/NovaTheme";
 
@@ -68,6 +68,7 @@ export default function ResultsScreen() {
   const finalCounterParam = (() => {
     const v = params.finalCounter as string | undefined;
     const n = v ? parseInt(v, 10) : NaN;
+    console.log("the counter : " + n);
     return Number.isFinite(n) ? n : undefined;
   })();
 
@@ -87,6 +88,41 @@ export default function ResultsScreen() {
   const isNewApiFormat = (data: ApiResponse): data is NewApiResponse => {
     return "success" in data && "cheat_detected" in data;
   };
+
+  // Cheating guard: if cheating detected, alert and navigate back
+  useEffect(() => {
+    if (!analysisData) return;
+    try {
+      const cheating = isNewApiFormat(analysisData)
+        ? Boolean(
+            analysisData.cheat_detected ||
+              analysisData.frame_results?.some(
+                (f) => f?.cheat_detection?.is_cheating === true
+              )
+          )
+        : false;
+
+      if (cheating) {
+        const msg =
+          (analysisData as NewApiResponse).error_message ||
+          (analysisData as NewApiResponse).message ||
+          "Cheating was detected in the video. Please retake the test.";
+        // Use setTimeout to avoid blocking render during navigation
+        setTimeout(() => {
+          Alert.alert("Cheating Detected", msg, [
+            {
+              text: "OK",
+              onPress: () =>
+                router.replace({
+                  pathname: "/(app)/assessment",
+                  params: { cheat: "1", testId, msg },
+                }),
+            },
+          ]);
+        }, 0);
+      }
+    } catch {}
+  }, [params.analysisData]);
 
   // Calculate performance metrics from API data
   const getPerformanceData = () => {

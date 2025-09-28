@@ -1,15 +1,15 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
-  Activity,
-  ArrowUp,
-  Heart,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  Trophy,
-  Users,
-  Zap,
+    Activity,
+    ArrowUp,
+    Heart,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    Trophy,
+    Users,
+    Zap,
 } from "lucide-react-native";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -66,6 +66,7 @@ export default function ProgressScreen() {
 
   const handlePlayVideo = (testId: number) => {
     // In real app, this would open video player
+    console.log(`Playing video for test ${testId}`);
   };
 
   const formatDate = (dateString: string) => {
