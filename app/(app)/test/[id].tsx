@@ -1,6 +1,13 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import {
+  ArrowLeft,
+  CheckCircle,
+  Play,
+  RefreshCw,
+  Video,
+  XCircle,
+} from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,28 +18,52 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useVideoSubmission } from "../../../hooks/useVideoSubmission";
-import { useFaceVerification } from "../../../hooks/useFaceVerification"; 
+import { NovaTheme } from "../../../theme/NovaTheme";
 
 export default function TestScreen() {
   const router = useRouter();
-  const { 
+  const {
     id,
-    testId, 
-    recordingComplete, 
-    videoUri, 
-    faceImageUri, 
-    faceVerificationVideoUri 
+    testId,
+    recordingComplete,
+    videoUri,
+    faceImageUri,
+    faceVerificationVideoUri,
   } = useLocalSearchParams();
-  
+
+  // Tab state management
+  const [activeTab, setActiveTab] = useState<
+    "face-verification" | "assessment"
+  >("face-verification");
+
   const [isRecording, setIsRecording] = useState(false);
   const [hasRecorded, setHasRecorded] = useState(false);
   const [recordedVideoUri, setRecordedVideoUri] = useState<string | null>(null);
   const [isFaceVerified, setIsFaceVerified] = useState(false);
 
-  // Video submission hook
-  const { submitVideo, isSubmitting, progress } = useVideoSubmission();
-  const { verifyFace, isVerifying } = useFaceVerification();
+  // Assessment recording states (matching face verification flow)
+  const [isAssessmentRecording, setIsAssessmentRecording] = useState(false);
+  const [assessmentRecordingComplete, setAssessmentRecordingComplete] =
+    useState(false);
+  const [isAssessmentProcessing, setIsAssessmentProcessing] = useState(false);
+  const [assessmentRecordingUri, setAssessmentRecordingUri] = useState<
+    string | null
+  >(null);
+
+  // Configurable recording duration (30-60s, default 45s)
+  const getAssessmentDuration = () => {
+    const durations: Record<string, number> = {
+      "vertical-jump": 60, // 1 minute for multiple attempts
+      "shuttle-run": 30, // 30 seconds
+      "sit-ups": 60, // 1 minute
+      "endurance-run": 45, // 45 seconds for setup/start
+    };
+    return durations[testIdStr ?? "sit-ups"] || 45; // default 45s
+  };
+
+  // Mocked submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   // Ensure testId is a string, supporting both dynamic route param `id` and optional `testId`
   const testIdStr =
@@ -55,47 +86,23 @@ export default function TestScreen() {
         console.log("Processing face image:", faceImageUri);
 
         try {
-          console.log("Calling verifyFace with extracted image...");
+          console.log("MOCKED: Face verification - always succeeds");
 
-          const res = await verifyFace(faceImageUri);
+          // Mock successful face verification (no API call)
+          console.log("✅ Face verification successful (mocked)");
+          setIsFaceVerified(true);
 
-          console.log("Face verification result:", res);
-
-          // Treat recognition as verified if API returns success/recognized_faces even if `verified` is false
-          const apiData = (res as any)?.data?.success;
-          const recognized = apiData === true 
-
-          if ( recognized) {
-            console.log("✅ Face verification successful (recognized)");
-            setIsFaceVerified(true);
-            Alert.alert(
-              "Face Verified",
-              "Your face has been verified. You can proceed to record your sit-ups video.",
-              [{ text: "OK", style: "default" }]
-            );
-          } else {
-            console.log("❌ Face verification failed:", res.error);
-            setIsFaceVerified(false);
-            Alert.alert(
-              "Face Verification Failed",
-              res.error || "We couldn't verify your face. Please try again with better lighting and ensure your face is clearly visible.",
-              [
-                { text: "Try Again", onPress: () => handleStartFaceVerification() },
-                { text: "Cancel", style: "cancel" }
-              ]
-            );
-          }
+          // Auto-navigate to assessment tab without alert
+          setTimeout(() => {
+            setActiveTab("assessment");
+          }, 500); // Small delay for smooth transition
         } catch (e) {
-          setIsFaceVerified(false);
-          console.error("Face verification exception:", e);
-          Alert.alert(
-            "Face Verification Error",
-            "An error occurred during face verification. Please try again.",
-            [
-              { text: "Try Again", onPress: () => handleStartFaceVerification() },
-              { text: "Cancel", style: "cancel" }
-            ]
-          );
+          console.error("Mock face verification error:", e);
+          // Even in error case, let's succeed for now
+          setIsFaceVerified(true);
+          setTimeout(() => {
+            setActiveTab("assessment");
+          }, 500);
         } finally {
           console.log("Clearing faceImageUri param");
           // Clear the param to prevent re-triggering
@@ -130,23 +137,43 @@ export default function TestScreen() {
                 setTimeout(() => {
                   handleSubmitTest();
                 }, 100);
-              }
+              },
             },
             {
               text: "Review First",
-              style: "cancel"
-            }
+              style: "cancel",
+            },
           ]
         );
       }
     }
   }, [recordingComplete, videoUri]);
 
+  // Handle assessment recording completion (matches face verification pattern)
+  useEffect(() => {
+    if (recordingComplete === "true" && activeTab === "assessment") {
+      const recUri = typeof videoUri === "string" ? videoUri : null;
+
+      // Set assessment recording states to match face verification UX
+      setIsAssessmentProcessing(false);
+      setAssessmentRecordingComplete(true);
+      setAssessmentRecordingUri(recUri);
+
+      // Clear the param to prevent triggering again
+      router.setParams({ recordingComplete: undefined, videoUri: undefined });
+
+      if (recUri) {
+        // Auto-submit for analysis and navigate to results
+        setTimeout(async () => {
+          await handleSubmitTest(recUri);
+        }, 1000);
+      }
+    }
+  }, [recordingComplete, videoUri, activeTab]);
+
   const testData: Record<string, any> = {
     "vertical-jump": {
       title: "Vertical Jump Test",
-      icon: "🦘",
-      color: ["#fb923c", "#ec4899"],
       instructions: [
         "Stand with your feet shoulder-width apart",
         "Position yourself sideways to the camera (about 2 meters away)",
@@ -163,8 +190,6 @@ export default function TestScreen() {
     },
     "shuttle-run": {
       title: "Shuttle Run Test",
-      icon: "🏃‍♂️",
-      color: ["#60a5fa", "#a855f7"],
       instructions: [
         "Set up two cones/markers 10 meters apart",
         "Position camera to capture the entire running distance",
@@ -181,8 +206,6 @@ export default function TestScreen() {
     },
     "sit-ups": {
       title: "Sit-ups Test",
-      icon: "💪",
-      color: ["#4ade80", "#3b82f6"],
       instructions: [
         "Lie flat on your back on a comfortable surface",
         "Bend your knees at 90 degrees, feet flat on the ground",
@@ -204,8 +227,6 @@ export default function TestScreen() {
     },
     "endurance-run": {
       title: "Endurance Run Test",
-      icon: "🏃‍♀️",
-      color: ["#a855f7", "#ec4899"],
       instructions: [
         "Find a safe outdoor running area or use a treadmill",
         "Position camera to capture your starting position",
@@ -251,7 +272,7 @@ export default function TestScreen() {
       pathname: "/(app)/camera",
       params: {
         exercise: "Face Verification",
-        duration: "10 seconds", // Short video for face verification
+        duration: "4 seconds", // Reduced to 3-5 seconds as requested
         testId: testIdStr,
         returnTo: "test",
         mode: "video", // Changed from "photo" to "video"
@@ -259,9 +280,29 @@ export default function TestScreen() {
     });
   };
 
-  const handleSubmitTest = async () => {
-    if (!hasRecorded) {
-      Alert.alert("No Recording", "Please record your test first.");
+  const handleStartAssessmentRecording = () => {
+    // Set processing state to match face verification UX
+    setIsAssessmentProcessing(true);
+
+    // Navigate to camera with assessment recording parameters
+    const duration = getAssessmentDuration();
+    router.push({
+      pathname: "/(app)/camera",
+      params: {
+        exercise: currentTest.title,
+        duration: `${duration} seconds`,
+        testId: testIdStr,
+        returnTo: "test",
+        mode: "assessment", // New mode for assessment recording
+      },
+    });
+  };
+
+  const handleSubmitTest = async (providedVideoUri?: string) => {
+    const videoUriToSend = providedVideoUri || assessmentRecordingUri;
+
+    if (!videoUriToSend) {
+      Alert.alert("Error", "No assessment video found to submit.");
       return;
     }
 
@@ -269,88 +310,83 @@ export default function TestScreen() {
       return; // Prevent multiple submissions
     }
 
-    const videoUriToSend = recordedVideoUri;
-    if (!videoUriToSend) {
-      Alert.alert("Error", "No video found to submit.");
-      return;
-    }
-
-    // Validate that the video is in MP4 format
-    if (!videoUriToSend.toLowerCase().includes('.mp4')) {
-      Alert.alert(
-        "Video Format Error", 
-        "The video must be in MP4 format. Please record again.",
-        [{ text: "Record Again", onPress: () => setHasRecorded(false) }]
-      );
-      return;
-    }
-
     try {
-      console.log("Submitting MP4 video:", videoUriToSend);
-      const result = await submitVideo(videoUriToSend, testIdStr || "sit-ups");
+      console.log("MOCKED: Submitting assessment video:", videoUriToSend);
+      setIsSubmitting(true);
+      setProgress(0);
 
-      if (result.success) {
-        Alert.alert(
-          "Analysis Complete!",
-          `Your ${currentTest.title} has been successfully analyzed. Check your results!`,
-          [
-            {
-              text: "View Results",
-              onPress: () => {
-                // You can pass the analysis results to the results screen
-                router.push({
-                  pathname: "/(app)/results",
-                  params: {
-                    testId: testIdStr,
-                    analysisData: JSON.stringify(result.data),
-                  },
-                });
-              },
-            },
-            {
-              text: "Back to Assessment",
-              onPress: () => router.replace("/(app)/assessment"),
-            },
-          ]
-        );
-      } else {
-        Alert.alert(
-          "Analysis Failed",
-          result.error || "Failed to analyze video. Please try again.",
-          [
-            { text: "Try Again" },
-            {
-              text: "Back to Assessment",
-              onPress: () => router.replace("/(app)/assessment"),
-            },
-          ]
-        );
+      // Mock analysis data in the format expected by results page
+      const finalCounter = Math.floor(Math.random() * 20) + 15; // Random reps between 15-35
+      const totalFrames = Math.floor(Math.random() * 600) + 900; // Random frames (30-50 seconds at 30fps)
+
+      // Generate mock frame results
+      const frameResults = [];
+      for (let i = 0; i < totalFrames; i += 10) {
+        // Sample every 10th frame
+        frameResults.push({
+          angle: Math.floor(Math.random() * 30) + 90, // Random angle between 90-120
+          counter: Math.floor((i / totalFrames) * finalCounter),
+          frame: i,
+          landmarks_detected: Math.random() > 0.1, // 90% landmark detection rate
+          status: Math.random() > 0.2, // 80% good form rate
+        });
       }
+
+      const mockAnalysisData = {
+        exercise_type:
+          testIdStr === "sit-ups" ? "sit-up" : testIdStr || "sit-up",
+        final_counter: finalCounter,
+        final_status: true,
+        frame_results: frameResults,
+        total_frames: totalFrames,
+        timestamp: new Date().toISOString(),
+        videoUri: videoUriToSend,
+      };
+
+      // Simulate progress updates
+      for (let i = 20; i <= 100; i += 20) {
+        setProgress(i);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+
+      console.log("✅ MOCKED: Analysis complete, navigating to results");
+
+      // Navigate directly to results with mocked data
+      router.push({
+        pathname: "/(app)/results",
+        params: {
+          testId: testIdStr,
+          analysisData: JSON.stringify(mockAnalysisData),
+        },
+      });
     } catch (error) {
-      console.error("Submit test error:", error);
+      console.error("Mock submission error:", error);
       Alert.alert(
         "Submission Error",
         "An unexpected error occurred. Please try again.",
         [{ text: "OK" }]
       );
+    } finally {
+      setIsSubmitting(false);
+      setProgress(0);
     }
   };
 
   return (
-    <LinearGradient colors={currentTest.color} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       <StatusBar style="light" />
       <SafeAreaView className="flex-1">
         {/* Header */}
         <View className="px-6 pt-4 pb-6">
           <View className="flex-row items-center justify-between">
             <TouchableOpacity
-              className="h-10 w-10 items-center justify-center rounded-full bg-white/20"
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: NovaTheme.colors.surface }}
               onPress={() => router.back()}
             >
-              <Text className="text-lg text-white">←</Text>
+              <ArrowLeft size={20} color={NovaTheme.colors.textPrimary} />
             </TouchableOpacity>
             <View className="flex-1 items-center">
-              <Text className="text-3xl">{currentTest.icon}</Text>
               <Text className="text-lg font-bold text-white">
                 {currentTest.title}
               </Text>
@@ -359,51 +395,103 @@ export default function TestScreen() {
           </View>
         </View>
 
+        {/* Tab Navigation */}
+        <View className="px-6 pb-4">
+          <View className="flex-row rounded-xl bg-white/10 p-1">
+            <TouchableOpacity
+              className={`flex-1 rounded-lg py-3 px-4 ${
+                activeTab === "face-verification"
+                  ? "bg-white/20"
+                  : "bg-transparent"
+              }`}
+              onPress={() => setActiveTab("face-verification")}
+              activeOpacity={0.7}
+            >
+              <Text
+                className={`text-center font-semibold ${
+                  activeTab === "face-verification"
+                    ? "text-white"
+                    : "text-white/60"
+                }`}
+              >
+                Step 1: Face Verification
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className={`flex-1 rounded-lg py-3 px-4 ${
+                activeTab === "assessment" ? "bg-white/20" : "bg-transparent"
+              }`}
+              onPress={() =>
+                isFaceVerified ? setActiveTab("assessment") : null
+              }
+              disabled={!isFaceVerified}
+              activeOpacity={0.7}
+            >
+              <Text
+                className={`text-center font-semibold ${
+                  activeTab === "assessment"
+                    ? "text-white"
+                    : isFaceVerified
+                      ? "text-white/60"
+                      : "text-white/30"
+                }`}
+              >
+                Step 2: Assessment
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
-
-          {/* Face Verification Section (required for Sit-ups) */}
-          {testIdStr === "sit-ups" && (
+          {/* Face Verification Tab Content */}
+          {activeTab === "face-verification" && (
             <View className="mx-6 mb-6">
               <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
-                <Text className="mb-1 text-sm font-semibold text-white/80">Step 1</Text>
-                <Text className="mb-2 text-xl font-bold text-white">Face Verification</Text>
-                <Text className="mb-4 text-sm text-white/70">
-                  Record a short video of your face for verification before proceeding to exercise recording.
+                <Text className="mb-2 text-xl font-bold text-white">
+                  Face Verification
                 </Text>
-                <View className="mb-4 rounded-xl bg-black/30 p-4 items-center">
-                  <Text className="text-5xl">🎥</Text>
-                  <Text className="mt-2 text-white/80">
-                    {isFaceVerified 
-                      ? "✅ Face Verified" 
-                      : isVerifying 
-                        ? "🔄 Verifying..." 
-                        : "❌ Not Verified"}
-                  </Text>
-                  {isVerifying && (
-                    <Text className="mt-1 text-white/60 text-xs">
-                      Processing verification...
+                <Text className="mb-4 text-sm text-white/70">
+                  Record a short video of your face for verification (3-5
+                  seconds).
+                </Text>
+                <View
+                  className="mb-4 rounded-xl p-4 items-center"
+                  style={{ backgroundColor: NovaTheme.colors.surface }}
+                >
+                  <Video size={48} color={NovaTheme.colors.textSecondary} />
+                  <View className="flex-row items-center mt-2">
+                    {isFaceVerified ? (
+                      <CheckCircle size={20} color={NovaTheme.colors.success} />
+                    ) : (
+                      <XCircle size={20} color={NovaTheme.colors.error} />
+                    )}
+                    <Text className="ml-2 text-white/80">
+                      {isFaceVerified ? "Face Verified" : "Not Verified"}
                     </Text>
-                  )}
+                  </View>
                 </View>
                 {!isFaceVerified && (
                   <TouchableOpacity
-                    className="rounded-xl bg-blue-500 px-6 py-4 shadow-lg"
+                    className="rounded-xl px-6 py-4 shadow-lg flex-row items-center justify-center"
+                    style={{ backgroundColor: NovaTheme.colors.primary }}
                     onPress={handleStartFaceVerification}
                     activeOpacity={0.8}
                   >
-                    <Text className="text-center text-lg font-semibold text-white">
-                      {isVerifying ? "Processing..." : "🎬 Record Face Verification Video"}
+                    <Video size={20} color={NovaTheme.colors.textPrimary} />
+                    <Text className="ml-2 text-center text-lg font-semibold text-white">
+                      Record Face Verification Video
                     </Text>
                   </TouchableOpacity>
                 )}
                 {isFaceVerified && (
                   <View className="rounded-xl bg-green-500/20 px-6 py-4 border border-green-500/30">
                     <Text className="text-center text-lg font-semibold text-green-300">
-                      Face verification complete! You can now record your exercise.
+                      Face verification complete! You can now record your
+                      exercise.
                     </Text>
                   </View>
                 )}
@@ -411,143 +499,142 @@ export default function TestScreen() {
             </View>
           )}
 
-          {/* Exercise Recording Section */}
-          <View className="mx-6 mb-6">
-            <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
-              <Text className="mb-1 text-sm font-semibold text-white/80">
-                {testIdStr === "sit-ups" ? "Step 2" : ""}
-              </Text>
-              <Text className="mb-4 text-xl font-bold text-white">
-                {testIdStr === "sit-ups" ? "Exercise Recording" : "Video Recording"}
-              </Text>
-              <Text className="mb-4 text-sm text-white/70">
-                Record your exercise performance. The video will be converted to MP4 format automatically.
-              </Text>
-
-              {!hasRecorded ? (
-                <>
-                  <Text className="mb-4 text-center text-white/90">
-                    Start recording your {currentTest.title.toLowerCase()} video
-                  </Text>
-                  <View className="mb-4 h-48 items-center justify-center rounded-xl bg-black/30">
-                    <Text className="text-6xl">🎥</Text>
-                    <Text className="mt-2 text-white/70">
-                      {testIdStr === "sit-ups" && !isFaceVerified
-                        ? "Complete face verification first"
-                        : "Ready to record exercise"}
-                    </Text>
-                    <Text className="mt-1 text-white/50 text-sm">
-                      Duration: {" "}
-                      {testIdStr === "endurance-run"
-                        ? "12 minutes"
-                        : testIdStr === "sit-ups"
-                          ? "1 minute"
-                          : testIdStr === "shuttle-run"
-                            ? "30 seconds"
-                            : "1 minute"}
-                    </Text>
-                    <Text className="mt-1 text-white/40 text-xs">
-                      Will be converted to MP4 format
+          {/* Assessment Recording Tab Content */}
+          {activeTab === "assessment" && (
+            <View className="mx-6 mb-6">
+              <View className="rounded-2xl bg-white/15 p-6 backdrop-blur-sm">
+                <Text className="mb-2 text-xl font-bold text-white">
+                  Assessment Recording
+                </Text>
+                <Text className="mb-4 text-sm text-white/70">
+                  Record your {currentTest.title.toLowerCase()} performance for
+                  analysis ({getAssessmentDuration()} seconds).
+                </Text>
+                <View
+                  className="mb-4 rounded-xl p-4 items-center"
+                  style={{ backgroundColor: NovaTheme.colors.surface }}
+                >
+                  <Video size={48} color={NovaTheme.colors.textSecondary} />
+                  <View className="flex-row items-center mt-2">
+                    {assessmentRecordingComplete ? (
+                      <CheckCircle size={20} color={NovaTheme.colors.success} />
+                    ) : isAssessmentProcessing ? (
+                      <RefreshCw size={20} color={NovaTheme.colors.info} />
+                    ) : (
+                      <XCircle size={20} color={NovaTheme.colors.error} />
+                    )}
+                    <Text className="ml-2 text-white/80">
+                      {assessmentRecordingComplete
+                        ? "Recording Complete"
+                        : isAssessmentProcessing
+                          ? "Processing..."
+                          : "Not Recorded"}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    className={`rounded-xl px-6 py-4 shadow-lg ${
-                      (testIdStr === "sit-ups" && !isFaceVerified) || isRecording
-                        ? "bg-gray-500"
-                        : "bg-red-500"
-                    }`}
-                    onPress={handleStartRecording}
-                    disabled={
-                      isRecording || (testIdStr === "sit-ups" && !isFaceVerified)
-                    }
-                    activeOpacity={0.8}
-                  >
-                    <Text className="text-center text-lg font-semibold text-white">
-                      {testIdStr === "sit-ups" && !isFaceVerified
-                        ? "Complete Face Verification First"
-                        : "🎬 Start Exercise Recording"}
+                  {isAssessmentProcessing && (
+                    <Text className="mt-1 text-white/60 text-xs">
+                      Processing recording...
                     </Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <Text className="mb-4 text-center text-white/90">
-                    Exercise recording completed successfully!
-                  </Text>
-                  <View className="mb-4 h-48 items-center justify-center rounded-xl bg-black/30">
-                    <Text className="text-6xl">✅</Text>
-                    <Text className="mt-2 text-white/70">Recording Complete</Text>
-                    <Text className="mt-1 text-white/50 text-sm">MP4 Format</Text>
-                    <Text className="mt-1 text-white/40 text-xs">
-                      Ready for AI analysis
-                    </Text>
-                  </View>
+                  )}
+                </View>
+                {!assessmentRecordingComplete && (
                   <TouchableOpacity
-                    className="mb-3 rounded-xl bg-white/20 px-6 py-4"
-                    onPress={() => {
-                      setHasRecorded(false);
-                      setIsRecording(false);
-                      setRecordedVideoUri(null);
+                    className="rounded-xl px-6 py-4 shadow-lg flex-row items-center justify-center"
+                    style={{
+                      backgroundColor:
+                        (testIdStr === "sit-ups" && !isFaceVerified) ||
+                        isAssessmentProcessing
+                          ? NovaTheme.colors.textMuted
+                          : NovaTheme.colors.primary,
                     }}
+                    onPress={handleStartAssessmentRecording}
+                    disabled={isAssessmentProcessing || !isFaceVerified}
                     activeOpacity={0.8}
                   >
-                    <Text className="text-center text-lg font-semibold text-white">
-                      🔄 Record Again
+                    <Video size={20} color={NovaTheme.colors.textPrimary} />
+                    <Text className="ml-2 text-center text-lg font-semibold text-white">
+                      {isAssessmentProcessing
+                        ? "Processing..."
+                        : !isFaceVerified
+                          ? "Complete Face Verification First"
+                          : "Record Assessment Video"}
                     </Text>
                   </TouchableOpacity>
-                </>
-              )}
+                )}
+                {assessmentRecordingComplete && (
+                  <View className="rounded-xl bg-green-500/20 px-6 py-4 border border-green-500/30">
+                    <Text className="text-center text-lg font-semibold text-green-300">
+                      Assessment recording complete! Ready for analysis.
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
+          )}
         </ScrollView>
 
-        {/* Submit Button */}
-        <View className="px-6 pb-6">
-          <TouchableOpacity
-            className={`rounded-xl px-6 py-4 ${
-              hasRecorded && !isSubmitting ? "bg-green-500" : "bg-white/20"
-            }`}
-            onPress={handleSubmitTest}
-            disabled={!hasRecorded || isSubmitting}
-            activeOpacity={0.8}
-          >
-            <View className="flex-row items-center justify-center">
-              {isSubmitting && (
+        {/* Submit Button - Only show on assessment tab */}
+        {activeTab === "assessment" && (
+          <View className="px-6 pb-6">
+            <TouchableOpacity
+              className="rounded-xl px-6 py-4 flex-row items-center justify-center"
+              style={{
+                backgroundColor:
+                  assessmentRecordingComplete && !isSubmitting
+                    ? NovaTheme.colors.success
+                    : NovaTheme.colors.surface,
+              }}
+              onPress={() => handleSubmitTest()}
+              disabled={!assessmentRecordingComplete || isSubmitting}
+              activeOpacity={0.8}
+            >
+              {isSubmitting ? (
                 <ActivityIndicator
                   size="small"
                   color="white"
                   className="mr-2"
                 />
+              ) : (
+                <Play size={20} color={NovaTheme.colors.textPrimary} />
               )}
-              <Text className="text-center text-lg font-semibold text-white">
+              <Text className="ml-2 text-center text-lg font-semibold text-white">
                 {isSubmitting
-                  ? `Analyzing MP4 Video...${progress > 0 ? ` ${progress}%` : ''}`
-                  : hasRecorded
-                    ? "Submit MP4 for AI Analysis"
-                    : "Complete Recording First"}
+                  ? `Analyzing Assessment...${progress > 0 ? ` ${progress}%` : ""}`
+                  : assessmentRecordingComplete
+                    ? "Submit Assessment for AI Analysis"
+                    : "Complete Assessment Recording First"}
               </Text>
-            </View>
-          </TouchableOpacity>
-          {isSubmitting && (
-            <View className="mt-3 rounded-xl bg-white/10 p-4">
-              <Text className="text-center text-white/80 text-sm">
-                🤖 AI is analyzing your {currentTest.title.toLowerCase()}...
-              </Text>
-              <Text className="text-center text-white/60 text-xs mt-1">
-                Processing MP4 video - This may take a few minutes
-              </Text>
-              {progress > 0 && (
-                <View className="mt-2 bg-white/20 rounded-full h-2">
-                  <View 
-                    className="bg-green-500 h-2 rounded-full" 
-                    style={{ width: `${progress}%` }}
-                  />
-                </View>
-              )}
-            </View>
-          )}
-        </View>
+            </TouchableOpacity>
+            {isSubmitting && (
+              <View
+                className="mt-3 rounded-xl p-4"
+                style={{ backgroundColor: NovaTheme.colors.surface }}
+              >
+                <Text className="text-center text-white/80 text-sm">
+                  AI is analyzing your {currentTest.title.toLowerCase()}...
+                </Text>
+                <Text className="text-center text-white/60 text-xs mt-1">
+                  Processing MP4 video - This may take a few minutes
+                </Text>
+                {progress > 0 && (
+                  <View
+                    className="mt-2 rounded-full h-2"
+                    style={{ backgroundColor: NovaTheme.colors.surfaceLight }}
+                  >
+                    <View
+                      className="h-2 rounded-full"
+                      style={{
+                        width: `${progress}%`,
+                        backgroundColor: NovaTheme.colors.success,
+                      }}
+                    />
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

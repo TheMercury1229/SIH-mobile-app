@@ -1,8 +1,16 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import {
+  Activity,
+  ArrowRight,
+  ArrowUp,
+  Clock,
+  Heart,
+  Zap,
+} from "lucide-react-native";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function AssessmentScreen() {
   const router = useRouter();
@@ -12,49 +20,33 @@ export default function AssessmentScreen() {
       id: "vertical-jump",
       title: "Vertical Jump Test",
       description: "Measure your explosive power and leg strength",
-      icon: "🦘",
-      color: ["#fb923c", "#ec4899"] as [
-        import("react-native").ColorValue,
-        import("react-native").ColorValue,
-      ],
       duration: "5 min",
       difficulty: "Easy",
+      icon: ArrowUp,
     },
     {
       id: "shuttle-run",
       title: "Shuttle Run Test",
       description: "Test your agility and speed",
-      icon: "🏃‍♂️",
-      color: ["#60a5fa", "#a855f7"] as [
-        import("react-native").ColorValue,
-        import("react-native").ColorValue,
-      ],
       duration: "10 min",
       difficulty: "Medium",
+      icon: Zap,
     },
     {
       id: "sit-ups",
       title: "Sit-ups Test",
       description: "Assess your core strength and endurance",
-      icon: "💪",
-      color: ["#4ade80", "#3b82f6"] as [
-        import("react-native").ColorValue,
-        import("react-native").ColorValue,
-      ],
       duration: "3 min",
       difficulty: "Easy",
+      icon: Activity,
     },
     {
       id: "endurance-run",
       title: "Endurance Run Test",
       description: "Evaluate your cardiovascular fitness",
-      icon: "🏃‍♀️",
-      color: ["#a855f7", "#ec4899"] as [
-        import("react-native").ColorValue,
-        import("react-native").ColorValue,
-      ],
       duration: "20 min",
       difficulty: "Hard",
+      icon: Heart,
     },
   ];
 
@@ -76,7 +68,7 @@ export default function AssessmentScreen() {
   };
 
   return (
-    <LinearGradient colors={["#667eea", "#764ba2"]} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       <StatusBar style="light" />
       <SafeAreaView className="flex-1">
         {/* Header */}
@@ -111,11 +103,19 @@ export default function AssessmentScreen() {
                 activeOpacity={0.8}
                 onPress={() => handleTestSelect(test.id)}
               >
-                <LinearGradient colors={test.color} className="p-6">
+                <View
+                  style={{ backgroundColor: NovaTheme.colors.surface }}
+                  className="p-6"
+                >
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1">
                       <View className="flex-row items-center mb-2">
-                        <Text className="text-3xl mr-3">{test.icon}</Text>
+                        <View className="mr-3">
+                          <test.icon
+                            size={24}
+                            color={NovaTheme.colors.primary}
+                          />
+                        </View>
                         <View className="flex-1">
                           <Text className="text-xl font-bold text-white">
                             {test.title}
@@ -127,13 +127,19 @@ export default function AssessmentScreen() {
                       </Text>
                       <View className="flex-row items-center justify-between">
                         <View className="flex-row items-center">
-                          <View className="mr-4">
-                            <Text className="text-xs text-white/70">
-                              Duration
-                            </Text>
-                            <Text className="text-sm font-semibold text-white">
-                              {test.duration}
-                            </Text>
+                          <View className="mr-4 flex-row items-center">
+                            <Clock
+                              size={14}
+                              color={NovaTheme.colors.textSecondary}
+                            />
+                            <View className="ml-1">
+                              <Text className="text-xs text-white/70">
+                                Duration
+                              </Text>
+                              <Text className="text-sm font-semibold text-white">
+                                {test.duration}
+                              </Text>
+                            </View>
                           </View>
                           <View>
                             <Text className="text-xs text-white/70">
@@ -146,13 +152,19 @@ export default function AssessmentScreen() {
                             </Text>
                           </View>
                         </View>
-                        <View className="h-8 w-8 items-center justify-center rounded-full bg-white/20">
-                          <Text className="text-white">→</Text>
+                        <View
+                          className="h-8 w-8 items-center justify-center rounded-full"
+                          style={{ backgroundColor: NovaTheme.colors.primary }}
+                        >
+                          <ArrowRight
+                            size={16}
+                            color={NovaTheme.colors.textPrimary}
+                          />
                         </View>
                       </View>
                     </View>
                   </View>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -162,6 +174,10 @@ export default function AssessmentScreen() {
             <View className="rounded-2xl bg-white/10 p-6 backdrop-blur-sm">
               <Text className="mb-3 text-lg font-bold text-white">
                 Before You Start
+              </Text>
+              <Text className="mb-2 text-white/90">
+                • All tests require face verification before recording (3-5
+                seconds)
               </Text>
               <Text className="mb-2 text-white/90">
                 • Make sure you have enough space to perform the tests
@@ -179,6 +195,6 @@ export default function AssessmentScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

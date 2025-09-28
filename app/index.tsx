@@ -1,12 +1,12 @@
 import "../global.css";
 
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { ActivityIndicator, Animated, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../store/authStore";
+import { NovaTheme } from "../theme/NovaTheme";
 
 // Keep the splash screen visible while we check authentication
 SplashScreen.preventAutoHideAsync();
@@ -53,7 +53,7 @@ export default function Index() {
   }, [token, isLoading, router]);
 
   return (
-    <LinearGradient colors={["#667eea", "#764ba2"]} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       <SafeAreaView className="flex-1 items-center justify-center px-6">
         <Animated.View style={{ opacity: fadeAnim }} className="items-center">
           {/* App Logo/Icon Placeholder */}
@@ -77,6 +77,6 @@ export default function Index() {
           </Text>
         </Animated.View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

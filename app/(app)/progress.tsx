@@ -1,8 +1,19 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import {
+  Activity,
+  ArrowUp,
+  Heart,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+  Users,
+  Zap,
+} from "lucide-react-native";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function ProgressScreen() {
   const router = useRouter();
@@ -14,51 +25,43 @@ export default function ProgressScreen() {
       testName: "Vertical Jump Test",
       score: "45 cm",
       date: "2024-01-15",
-      icon: "🦘",
-      color: ["#fb923c", "#ec4899"],
-      videoThumbnail: "📹",
       improvement: "+3cm",
       isImprovement: true,
+      icon: ArrowUp,
     },
     {
       id: 2,
       testName: "Sit-ups Test",
       score: "32 reps",
       date: "2024-01-14",
-      icon: "💪",
-      color: ["#4ade80", "#3b82f6"],
-      videoThumbnail: "📹",
       improvement: "+5 reps",
       isImprovement: true,
+      icon: Activity,
     },
     {
       id: 3,
       testName: "Shuttle Run Test",
       score: "18.5 sec",
       date: "2024-01-12",
-      icon: "🏃‍♂️",
-      color: ["#60a5fa", "#a855f7"],
-      videoThumbnail: "📹",
       improvement: "-1.2s",
       isImprovement: true,
+      icon: Zap,
     },
     {
       id: 4,
       testName: "Endurance Run Test",
       score: "2.1 km",
       date: "2024-01-10",
-      icon: "🏃‍♀️",
-      color: ["#a855f7", "#ec4899"],
-      videoThumbnail: "📹",
       improvement: "-0.1km",
       isImprovement: false,
+      icon: Heart,
     },
   ];
 
   const overallStats = [
-    { label: "Total Tests", value: "12", change: "+4" },
-    { label: "Best Score", value: "95%", change: "+12%" },
-    { label: "Consistency", value: "87%", change: "+5%" },
+    { label: "Total Tests", value: "12", change: "+4", icon: Trophy },
+    { label: "Best Score", value: "95%", change: "+12%", icon: Target },
+    { label: "Consistency", value: "87%", change: "+5%", icon: Users },
   ];
 
   const handlePlayVideo = (testId: number) => {
@@ -76,7 +79,7 @@ export default function ProgressScreen() {
   };
 
   return (
-    <LinearGradient colors={["#667eea", "#764ba2"]} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       <StatusBar style="light" />
       <SafeAreaView className="flex-1">
         {/* Header */}
@@ -114,14 +117,23 @@ export default function ProgressScreen() {
               {overallStats.map((stat, index) => (
                 <View
                   key={index}
-                  className="flex-1 rounded-xl bg-white/15 p-4 backdrop-blur-sm"
-                  style={{ marginHorizontal: index === 1 ? 8 : 0 }}
+                  className="flex-1 rounded-xl p-4"
+                  style={{
+                    marginHorizontal: index === 1 ? 8 : 0,
+                    backgroundColor: NovaTheme.colors.surface,
+                  }}
                 >
+                  <View className="mb-2">
+                    <stat.icon size={20} color={NovaTheme.colors.primary} />
+                  </View>
                   <Text className="text-2xl font-bold text-white">
                     {stat.value}
                   </Text>
                   <Text className="text-sm text-white/80">{stat.label}</Text>
-                  <Text className="text-xs text-green-400 mt-1">
+                  <Text
+                    className="text-xs mt-1"
+                    style={{ color: NovaTheme.colors.success }}
+                  >
                     {stat.change} this month
                   </Text>
                 </View>
@@ -139,14 +151,8 @@ export default function ProgressScreen() {
                 key={result.id}
                 className="mb-4 rounded-2xl overflow-hidden"
               >
-                <LinearGradient
-                  colors={
-                    result.color.concat("rgba(255,255,255,0.1)") as [
-                      import("react-native").ColorValue,
-                      import("react-native").ColorValue,
-                      ...import("react-native").ColorValue[],
-                    ]
-                  }
+                <View
+                  style={{ backgroundColor: NovaTheme.colors.surface }}
                   className="rounded-2xl"
                 >
                   <View className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
@@ -154,7 +160,12 @@ export default function ProgressScreen() {
                       {/* Test Info */}
                       <View className="flex-1">
                         <View className="flex-row items-center mb-2">
-                          <Text className="text-2xl mr-3">{result.icon}</Text>
+                          <View className="mr-3">
+                            <result.icon
+                              size={20}
+                              color={NovaTheme.colors.primary}
+                            />
+                          </View>
                           <View>
                             <Text className="text-lg font-bold text-white">
                               {result.testName}
@@ -177,32 +188,44 @@ export default function ProgressScreen() {
                             <Text className="text-xs text-white/70">
                               Change
                             </Text>
-                            <Text
-                              className={`text-sm font-semibold ${
-                                result.isImprovement
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              {result.improvement}
-                            </Text>
+                            <View className="flex-row items-center">
+                              {result.isImprovement ? (
+                                <TrendingUp
+                                  size={14}
+                                  color={NovaTheme.colors.success}
+                                />
+                              ) : (
+                                <TrendingDown
+                                  size={14}
+                                  color={NovaTheme.colors.error}
+                                />
+                              )}
+                              <Text
+                                className="ml-1 text-sm font-semibold"
+                                style={{
+                                  color: result.isImprovement
+                                    ? NovaTheme.colors.success
+                                    : NovaTheme.colors.error,
+                                }}
+                              >
+                                {result.improvement}
+                              </Text>
+                            </View>
                           </View>
                         </View>
                       </View>
 
                       {/* Video Thumbnail */}
                       <TouchableOpacity
-                        className="ml-4 h-16 w-16 items-center justify-center rounded-xl bg-white/20"
+                        className="ml-4 h-16 w-16 items-center justify-center rounded-xl"
+                        style={{ backgroundColor: NovaTheme.colors.primary }}
                         onPress={() => handlePlayVideo(result.id)}
                       >
-                        <Text className="text-2xl">
-                          {result.videoThumbnail}
-                        </Text>
                         <Text className="text-xs text-white/70 mt-1">Play</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
-                </LinearGradient>
+                </View>
               </View>
             ))}
           </View>
@@ -299,6 +322,6 @@ export default function ProgressScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

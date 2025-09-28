@@ -1,11 +1,15 @@
-import { LinearGradient } from "expo-linear-gradient";
+import {
+  CameraView,
+  useCameraPermissions,
+  useMicrophonePermissions,
+} from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as VideoThumbnails from "expo-video-thumbnails";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
-import * as VideoThumbnails from 'expo-video-thumbnails';
+import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function CameraScreen() {
   const router = useRouter();
@@ -32,18 +36,24 @@ export default function CameraScreen() {
   const [isCountdown, setIsCountdown] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
-  const [extractedImageUri, setExtractedImageUri] = useState<string | null>(null);
+  const [extractedImageUri, setExtractedImageUri] = useState<string | null>(
+    null
+  );
   const hasNavigatedRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const captureMode = (typeof mode === "string" ? mode : Array.isArray(mode) ? mode[0] : undefined) === "photo" ? "photo" : "video";
+  const modeString =
+    typeof mode === "string" ? mode : Array.isArray(mode) ? mode[0] : undefined;
+  const captureMode = modeString === "photo" ? "photo" : "video";
   const maxDuration = parseInt(duration?.toString().replace(/\D/g, "") || "30");
   const needsMic = captureMode !== "photo";
   const hasCamera = cameraPermission?.granted;
   const hasMic = !needsMic || micPermission?.granted;
 
-  // Determine if this is face verification
-  const isFaceVerification = exercise === "Face Verification" || captureMode === "photo";
+  // Determine if this is face verification or assessment
+  const isFaceVerification =
+    exercise === "Face Verification" || captureMode === "photo";
+  const isAssessmentRecording = modeString === "assessment";
 
   // Request all needed permissions together
   const requestAllPermissions = async () => {
@@ -136,7 +146,9 @@ export default function CameraScreen() {
   };
 
   // Extract frame from video and save as JPEG - simplified without FileSystem
-  const extractFrameFromVideo = async (videoUri: string): Promise<string | null> => {
+  const extractFrameFromVideo = async (
+    videoUri: string
+  ): Promise<string | null> => {
     try {
       console.log("Extracting frame from video:", videoUri);
 
@@ -150,10 +162,9 @@ export default function CameraScreen() {
       );
 
       console.log("Frame extracted successfully:", frameUri);
-      
+
       // The frame is already saved by VideoThumbnails, just return the URI
       return frameUri;
-
     } catch (error) {
       console.error("Frame extraction error:", error);
       Alert.alert("Error", "Failed to extract frame from video");
@@ -195,13 +206,13 @@ export default function CameraScreen() {
 
       // Start recording
       const video = await cameraRef.current.recordAsync(recordingOptions);
-      
+
       console.log("Recording completed:", video?.uri);
-      
+
       if (video?.uri) {
         setRecordingUri(video.uri);
         console.log("Video URI set:", video.uri);
-        
+
         // If this is face verification, extract frame immediately and wait for it to complete
         if (isFaceVerification) {
           console.log("Extracting frame for face verification...");
@@ -216,15 +227,15 @@ export default function CameraScreen() {
           }
         }
       }
-
     } catch (error) {
       console.error("Error starting recording:", error);
       setIsRecording(false);
       setTimer(0);
-      
+
       // Better error handling
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
       if (errorMessage.includes("RECORD_AUDIO")) {
         Alert.alert(
           "Audio Permission Error",
@@ -241,7 +252,10 @@ export default function CameraScreen() {
           ]
         );
       } else {
-        Alert.alert("Recording Error", "Failed to start recording: " + errorMessage);
+        Alert.alert(
+          "Recording Error",
+          "Failed to start recording: " + errorMessage
+        );
       }
     }
   };
@@ -262,12 +276,37 @@ export default function CameraScreen() {
         console.log("Recording URI:", recordingUri);
         console.log("Extracted Image URI:", extractedImageUri);
         console.log("Is face verification:", isFaceVerification);
-        
+
         if (isFaceVerification) {
           // Already navigated in startRecording after extraction; nothing else to do here
           return;
+        } else if (isAssessmentRecording) {
+          // For assessment recording (matches face verification UX)
+          Alert.alert(
+            "Assessment Recording Complete!",
+            "Your assessment video has been recorded successfully.",
+            [
+              {
+                text: "Continue",
+                onPress: () => {
+                  if (returnTo === "test" && testIdStr && recordingUri) {
+                    router.replace({
+                      pathname: "/(app)/test/[id]",
+                      params: {
+                        id: testIdStr,
+                        recordingComplete: "true",
+                        videoUri: recordingUri,
+                      },
+                    });
+                  } else {
+                    router.replace("/(app)/assessment");
+                  }
+                },
+              },
+            ]
+          );
         } else {
-          // For exercise recording
+          // For legacy exercise recording
           Alert.alert(
             "Exercise Recording Complete!",
             "Your exercise video has been recorded and converted to MP4 format.",
@@ -293,10 +332,12 @@ export default function CameraScreen() {
           );
         }
       }, 2000); // Increased delay to ensure frame extraction completes
-
     } catch (error) {
       console.error("Error stopping recording:", error);
-      Alert.alert("Error", "Failed to stop recording: " + (error as Error).message);
+      Alert.alert(
+        "Error",
+        "Failed to stop recording: " + (error as Error).message
+      );
     }
   };
 
@@ -317,13 +358,15 @@ export default function CameraScreen() {
 
   if (!hasCamera || (needsMic && !hasMic)) {
     return (
-      <LinearGradient colors={["#1f2937", "#111827"]} className="flex-1">
+      <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
         <StatusBar style="light" />
         <SafeAreaView className="flex-1 items-center justify-center px-6">
           <View className="items-center space-y-6">
             <Text className="text-6xl">📱</Text>
             <Text className="text-white text-2xl font-bold text-center">
-              {needsMic && !hasMic ? "Camera & Microphone Access Required" : "Camera Access Required"}
+              {needsMic && !hasMic
+                ? "Camera & Microphone Access Required"
+                : "Camera Access Required"}
             </Text>
             <Text className="text-white/80 text-center text-base">
               {isFaceVerification
@@ -348,17 +391,17 @@ export default function CameraScreen() {
             </TouchableOpacity>
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient colors={["#1f2937", "#111827"]} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       <StatusBar style="light" />
       <View className="flex-1">
-        <CameraView 
-          ref={cameraRef} 
-          style={{ flex: 1 }} 
+        <CameraView
+          ref={cameraRef}
+          style={{ flex: 1 }}
           facing={facing}
           mode="video"
         >
@@ -376,12 +419,18 @@ export default function CameraScreen() {
 
                 <View className="items-center">
                   <Text className="text-white font-bold text-lg">
-                    {isFaceVerification ? "Face Verification Video" : exercise || "Exercise Recording"}
+                    {isFaceVerification
+                      ? "Face Verification Video"
+                      : isAssessmentRecording
+                        ? "Assessment Recording"
+                        : exercise || "Exercise Recording"}
                   </Text>
                   <Text className="text-white/80 text-sm">
-                    {isFaceVerification 
-                      ? "Record a short video of your face" 
-                      : duration || "Recording Duration"}
+                    {isFaceVerification
+                      ? "Record a video of your face"
+                      : isAssessmentRecording
+                        ? "Record your assessment performance"
+                        : duration || "Recording Duration"}
                   </Text>
                   {testIdStr && (
                     <Text className="text-white/60 text-xs mt-1">
@@ -434,21 +483,27 @@ export default function CameraScreen() {
                     ? isRecording
                       ? "Look directly at the camera for face verification"
                       : "Position your face in the frame and start recording for verification"
-                    : isRecording
-                      ? `Perform ${exercise || "your exercise"} now!`
-                      : `Ready to record ${exercise || "your exercise"}?`}
+                    : isAssessmentRecording
+                      ? isRecording
+                        ? `Perform your ${exercise || "assessment"} now!`
+                        : `Ready to record your ${exercise || "assessment"}?`
+                      : isRecording
+                        ? `Perform ${exercise || "your exercise"} now!`
+                        : `Ready to record ${exercise || "your exercise"}?`}
                 </Text>
                 {!isRecording && (
                   <Text className="text-white/70 text-center text-sm">
                     {isFaceVerification
-                      ? "Keep your face visible and well-lit. Recording duration: 5-10 seconds"
-                      : testIdStr === "vertical-jump"
-                        ? "Position yourself sideways to the camera, keep hands on hips"
-                        : testIdStr === "shuttle-run"
-                          ? "Ensure camera captures full running distance"
-                          : testIdStr === "sit-ups"
-                            ? "Position camera to show your side profile"
-                            : "Position yourself in the camera frame and tap record"}
+                      ? `Keep your face visible and well-lit. Recording duration: ${maxDuration} seconds`
+                      : isAssessmentRecording
+                        ? `Follow proper form for accurate assessment. Duration: ${maxDuration} seconds`
+                        : testIdStr === "vertical-jump"
+                          ? "Position yourself sideways to the camera, keep hands on hips"
+                          : testIdStr === "shuttle-run"
+                            ? "Ensure camera captures full running distance"
+                            : testIdStr === "sit-ups"
+                              ? "Position camera to show your side profile"
+                              : "Position yourself in the camera frame and tap record"}
                   </Text>
                 )}
               </View>
@@ -479,6 +534,6 @@ export default function CameraScreen() {
           </SafeAreaView>
         </CameraView>
       </View>
-    </LinearGradient>
+    </View>
   );
 }

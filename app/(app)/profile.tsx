@@ -1,5 +1,4 @@
 import { Picker } from "@react-native-picker/picker";
-import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, useRouter } from "expo-router";
 import {
   Alert,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../../store/authStore";
+import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function ProfileScreen() {
   const { user, token, logout } = useAuthStore();
@@ -62,7 +62,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <LinearGradient colors={["#667eea", "#764ba2"]} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       {/* <StatusBar style="light" /> */}
       <SafeAreaView className="flex-1">
         <KeyboardAvoidingView
@@ -263,6 +263,6 @@ export default function ProfileScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

@@ -1,4 +1,3 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../../store/authStore";
+import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -66,7 +66,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <LinearGradient colors={["#667eea", "#764ba2"]} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       <StatusBar style="light" />
       <SafeAreaView className="flex-1">
         <KeyboardAvoidingView
@@ -162,22 +162,9 @@ export default function LoginScreen() {
                 </View>
               </View>
             </View>
-
-            {/* Demo Instructions */}
-            <View className="mb-8 rounded-xl bg-white/10 p-4">
-              <Text className="mb-2 text-sm font-medium text-white">
-                Demo Instructions:
-              </Text>
-              <Text className="text-xs text-white/80">
-                • Enter any valid email format (e.g., user@example.com)
-              </Text>
-              <Text className="text-xs text-white/80">
-                • Enter any password to login
-              </Text>
-            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

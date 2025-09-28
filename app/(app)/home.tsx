@@ -1,9 +1,18 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import {
+  Activity,
+  Calendar,
+  ClipboardCheck,
+  Target,
+  TrendingUp,
+  Trophy,
+  Users,
+} from "lucide-react-native";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../../store/authStore";
+import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function HomeScreen() {
   const { user, token, logout } = useAuthStore();
@@ -25,41 +34,37 @@ export default function HomeScreen() {
     {
       title: "Start Assessment",
       description: "Begin your fitness assessment",
-      icon: "📋",
-      color: "from-orange-400 to-pink-400",
+      icon: ClipboardCheck,
       onPress: handleStartAssessment,
     },
     {
       title: "View Progress",
       description: "Track your achievements",
-      icon: "📊",
-      color: "from-blue-400 to-purple-400",
+      icon: TrendingUp,
       onPress: handleViewProgress,
     },
     {
       title: "Set Goals",
       description: "Plan your next milestone",
-      icon: "🎯",
-      color: "from-green-400 to-blue-400",
+      icon: Target,
       onPress: () => {},
     },
     {
       title: "Community",
       description: "Connect with athletes",
-      icon: "👥",
-      color: "from-purple-400 to-pink-400",
+      icon: Users,
       onPress: () => {},
     },
   ];
 
   const stats = [
-    { label: "Workouts", value: "24" },
-    { label: "Streak", value: "7 days" },
-    { label: "Goals", value: "3/5" },
+    { label: "Workouts", value: "24", icon: Activity },
+    { label: "Streak", value: "7 days", icon: Calendar },
+    { label: "Goals", value: "3/5", icon: Trophy },
   ];
 
   return (
-    <LinearGradient colors={["#667eea", "#764ba2"]} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: NovaTheme.colors.background }}>
       <StatusBar style="light" />
       <SafeAreaView className="flex-1">
         <ScrollView
@@ -86,7 +91,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Stats Cards */}
-          <View className="mx-6 mb-8 flex-row justify-between">
+          {/* <View className="mx-6 mb-8 flex-row justify-between">
             {stats.map((stat, index) => (
               <View
                 key={index}
@@ -99,7 +104,7 @@ export default function HomeScreen() {
                 <Text className="text-sm text-white/80">{stat.label}</Text>
               </View>
             ))}
-          </View>
+          </View> */}
 
           {/* Quick Actions */}
           <View className="px-6">
@@ -114,27 +119,20 @@ export default function HomeScreen() {
                   activeOpacity={0.8}
                   onPress={action.onPress}
                 >
-                  <LinearGradient
-                    colors={
-                      action.color.includes("orange")
-                        ? ["#fb923c", "#ec4899"]
-                        : action.color.includes("blue") &&
-                            action.color.includes("purple")
-                          ? ["#60a5fa", "#a855f7"]
-                          : action.color.includes("green")
-                            ? ["#4ade80", "#3b82f6"]
-                            : ["#a855f7", "#ec4899"]
-                    }
+                  <View
+                    style={{ backgroundColor: NovaTheme.colors.surface }}
                     className="p-6"
                   >
-                    <Text className="mb-2 text-3xl">{action.icon}</Text>
+                    <View className="mb-3">
+                      <action.icon size={24} color={NovaTheme.colors.primary} />
+                    </View>
                     <Text className="mb-1 text-lg font-bold text-white">
                       {action.title}
                     </Text>
                     <Text className="text-sm text-white/90">
                       {action.description}
                     </Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -166,6 +164,6 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

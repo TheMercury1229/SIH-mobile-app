@@ -1,39 +1,38 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, useSegments } from "expo-router";
 import { useAuthStore } from "../../store/authStore";
+import { NovaTheme } from "../../theme/NovaTheme";
 
 export default function AppLayout() {
   const { token } = useAuthStore();
+  const segments = useSegments();
 
   if (!token) {
     return <Redirect href="/(auth)/login" />;
   }
 
+  // Check if current route is camera page to hide tab bar
+  const isCameraPage =
+    segments && segments.some((segment) => segment === "camera");
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#FFFFFF",
-        tabBarInactiveTintColor: "rgba(255, 255, 255, 0.6)",
-        tabBarStyle: {
-          backgroundColor: "transparent",
-          borderTopWidth: 0,
-          height: 88,
-          paddingBottom: 8,
-          paddingTop: 8,
-          position: "absolute",
-          elevation: 0,
-        },
-        tabBarBackground: () => (
-          <LinearGradient
-            colors={["rgba(102, 126, 234, 0.9)", "rgba(118, 75, 162, 0.9)"]}
-            style={{
-              flex: 1,
+        tabBarActiveTintColor: NovaTheme.components.tabBar.active,
+        tabBarInactiveTintColor: NovaTheme.components.tabBar.inactive,
+        tabBarStyle: isCameraPage
+          ? { display: "none" } // Hide tab bar completely on camera page
+          : {
+              backgroundColor: NovaTheme.components.tabBar.background,
+              borderTopWidth: 0,
+              height: 88,
+              paddingBottom: 8,
+              paddingTop: 8,
+              position: "absolute",
+              elevation: 0,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
-            }}
-          />
-        ),
+            },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
