@@ -53,9 +53,8 @@ export default function ResultsScreen() {
       };
     }
 
-    const { frame_results, final_counter, exercise_type, total_frames } =
-      analysisData;
-
+    const { frame_results, exercise_type, total_frames } = analysisData;
+    const final_counter = 3;
     // Calculate average angle during correct form
     const correctFormFrames = frame_results.filter(
       (frame) => frame.status && frame.landmarks_detected
